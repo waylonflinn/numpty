@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numpty"
+version = "0.1.0"
+description = "A minimal, provider-neutral agent library"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+anthropic = ["anthropic"]
+openai = ["openai"]
+providers = ["numpty[anthropic,openai]"]
+calc = ["simpleeval"]
+all = ["numpty[providers,calc]"]
+
+[dependency-groups]
+dev = [
+    "griffonner>=0.3.5",
+    "pytest>=9.0.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

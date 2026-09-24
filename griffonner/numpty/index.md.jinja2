@@ -1,0 +1,104 @@
+{%- macro estimate_tokens(cls) -%}
+{%- set ns = namespace(chars=0) -%}
+{%- if cls.docstring %}{% set ns.chars = ns.chars + cls.docstring.value | length %}{% endif -%}
+{%- for name, method in cls.members.items() -%}
+  {%- if not method.is_alias and method.kind.value == "function" -%}
+    {%- set ns.chars = ns.chars + name | length -%}
+    {%- if method.docstring %}{% set ns.chars = ns.chars + method.docstring.value | length %}{% endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{{ (ns.chars*1.6 / 4) | int }}
+{%- endmacro -%}
+
+{%- macro summary(o) -%}
+{%- if o.docstring -%}
+{%- for section in o.docstring.parsed -%}
+{%- if section.kind.value == "text" %}
+{{ section.value }}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_module(mod) -%}
+{%- set ns = namespace(classes=[], functions=[]) -%}
+{%- for name, member in mod.members.items() -%}
+{%- if not member.is_alias and not name.startswith('_') -%}
+{%- if member.kind.value == "class" %}{% set ns.classes = ns.classes + [member] %}{% endif -%}
+{%- if member.kind.value == "function" %}{% set ns.functions = ns.functions + [member] %}{% endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if ns.classes or ns.functions %}
+
+## {{ mod.path }}
+`{{ mod.relative_filepath }}`
+{{ summary(mod) }}
+{%- for cls in ns.classes %}
+
+### {{ cls.name }}
+`{{ cls.relative_filepath }}` · _lines {{ cls.lineno }}–{{ cls.endlineno }}_
+{{ summary(cls) }}
+
+{%- set init = cls.members.get('__init__') %}
+{%- set ms = namespace(methods=[]) %}
+{%- for name, method in cls.members.items() %}
+{%- if not method.is_alias and method.kind.value == "function" and not name.startswith('_') %}
+{%- set ms.methods = ms.methods + [method] %}
+{%- endif %}
+{%- endfor %}
+{%- if ms.methods %}
+
+#### Interface
+
+```python
+{%- if init %}
+{{ macros.render_sig(cls.name, init.parameters) }}
+{%- endif %}
+{%- for method in ms.methods %}
+{{ macros.render_sig(cls.name ~ "." ~ method.name, method.parameters) }} -> {{ method.returns }}
+{%- endfor %}
+```
+{%- endif %}
+
+→ [{{ cls.name }}]({{ cls.name }}.md) (~{{ estimate_tokens(cls) }} tokens)
+{%- endfor %}
+{%- for fn in ns.functions %}
+
+### {{ fn.name }}
+`{{ fn.relative_filepath }}` · _lines {{ fn.lineno }}–{{ fn.endlineno }}_
+
+```python
+{{ macros.render_sig(fn.name, fn.parameters) }} -> {{ fn.returns }}
+```
+{{ summary(fn) }}
+{%- if fn.docstring %}
+{%- for section in fn.docstring.parsed %}
+{%- if section.kind.value == "parameters" %}
+
+**Args:**
+{{ macros.render_args(section) }}
+{%- elif section.kind.value == "returns" %}
+{%- for ret in section.value %}
+
+**Returns:** {{ ret.description }}
+{%- endfor %}
+{%- elif section.kind.value == "raises" %}
+
+**Raises:**
+{%- for raised in section.value %}
+- `{{ raised.annotation }}` — {{ raised.description }}
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- for name, sub in mod.modules.items() %}
+{{- render_module(sub) }}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- import "numpty/macros.jinja2" as macros -%}
+# numpty API
+{{ summary(obj) }}
+{{ render_module(obj) }}

@@ -1,0 +1,56 @@
+{#- `Annotated[T, ...]` renders as `T`. The metadata is a description, shown in Args. -#}
+{%- macro type_of(a) -%}
+{%- if a.left is defined and (a.left | string).endswith("Annotated") -%}
+{{ a.slice.elements[0] }}
+{%- else -%}
+{{ a }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_sig(prefix, parameters) -%}
+{%- set ns = namespace(args=[]) -%}
+{%- for p in parameters -%}
+{%- if p.name not in ["self", "cls"] -%}
+    {%- if p.default -%}
+      {%- set ns.args = ns.args + [p.name ~ ": " ~ type_of(p.annotation) ~ " = " ~ p.default] -%}
+    {%- else -%}
+      {%- set ns.args = ns.args + [p.name ~ ": " ~ type_of(p.annotation)] -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- set flat = prefix ~ "(" ~ ns.args | join(", ") ~ ")" -%}
+{%- if flat | length <= 100 -%}
+{{ flat }}
+{%- else -%}
+{%- set indent = namespace(val="") -%}
+{%- for i in range(prefix | length + 1) -%}{%- set indent.val = indent.val ~ " " -%}{%- endfor -%}
+{%- set groups = namespace(lines=[]) -%}
+{%- set buf = namespace(items=[], width=0) -%}
+{%- for arg in ns.args -%}
+  {%- set sep_cost = 2 if buf.items | length > 0 else 0 -%}
+  {%- set new_width = buf.width + sep_cost + (arg | length) -%}
+  {%- if (buf.items | length > 0 and new_width + (indent.val | length) > 100) -%}
+    {%- set groups.lines = groups.lines + [buf.items | join(", ")] -%}
+    {%- set buf.items = [] -%}
+    {%- set buf.width = 0 -%}
+  {%- endif -%}
+  {%- set buf.items = buf.items + [arg] -%}
+  {%- set buf.width = buf.width + sep_cost + (arg | length) -%}
+{%- endfor -%}
+{%- if buf.items -%}
+  {%- set groups.lines = groups.lines + [buf.items | join(", ")] -%}
+{%- endif -%}
+{{ prefix }}({{ groups.lines | join(",\n" ~ indent.val) }})
+{%- endif -%}
+{%- endmacro -%}
+
+{#- One bullet per documented parameter. No docstring description: use the `Annotated` description. -#}
+{%- macro render_args(section) -%}
+{%- for param in section.value %}
+{%- set desc = param.description %}
+{%- if not desc and param.annotation.left is defined and (param.annotation.left | string).endswith("Annotated") %}
+{%- set desc = param.annotation.slice.elements[1] | string | trim("\"'") %}
+{%- endif %}
+- `{{ param.name }}`{% if param.annotation %} (`{{ type_of(param.annotation) }}`){% endif %} — {{ desc }}
+{%- endfor %}
+{%- endmacro -%}
