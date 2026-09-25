@@ -9,7 +9,7 @@ class Agent:
     """Tool-use loop over a model. Keeps the conversation across calls.
 
     Attributes:
-        messages: Conversation history, oldest first. Starts with the system message.
+        messages: Conversation history, oldest first. Starts with the system message, if given.
         tools: Tools by name.
         model: The model.
     """
@@ -22,10 +22,9 @@ class Agent:
             tools: Tools the model can call. Same name: last one wins.
             system: System prompt.
         """
-        # BUG: empty `system` still adds an empty `SystemMessage`.
         self.model = model
         self.tools = {t.name: t for t in tools}
-        self.messages = [SystemMessage(system)]
+        self.messages = [SystemMessage(system)] if system else []
 
     def __call__(self, text, max_turns=5):
         """Send a user message. Run tool calls until the model replies without one.

@@ -12,15 +12,23 @@ from typing import Annotated, Callable, get_args, get_origin, get_type_hints
 class Tool(ABC):
     """Action a model can call by name.
 
-    Subclass: implement `run` and set the attributes below. Models send `name`,
-    `description`, and `parameters` to the provider as the tool definition.
+    Subclass: implement run. Set the attributes below, or pass them to Tool.__init__
+    Models send `name`, `description`, and `parameters` to the provider as the tool definition.
 
     Attributes:
         name: Tool name the model calls. Unique among the tools of one agent.
         description: What the tool does and when to use it. The model reads it.
         parameters: JSON Schema of type `object` for the `run` arguments.
     """
-    # BUG: every model needs `name`, `description`, `parameters`. Not declared or enforced here.
+
+    name: str
+    description: str
+    parameters: dict
+
+    def __init__(self, name: str, description: str, parameters: dict):
+        self.name = name
+        self.description = description
+        self.parameters = parameters
 
     @abstractmethod
     def run(self, arguments: dict):
@@ -43,7 +51,7 @@ class Tool(ABC):
 class PythonTool(Tool):
     """Tool that calls a Python function in-process."""
 
-    def __init__(self, function: Callable[..., str], name: str | None = None, description: str | None = None,
+    def __init__(self, function: Callable, name: str | None = None, description: str | None = None,
                  parameters: dict | None = None):
         """Wrap a function as a tool.
 
@@ -56,11 +64,8 @@ class PythonTool(Tool):
                 `function_schema(function)`.
 
         Raises:
-            TypeError: Default `parameters` only. A parameter has no type hint.
-            KeyError: Default `parameters` only. A parameter type is not supported.
+            TypeError: Default `parameters` only. A parameter has no type hint or the type is not supported.
         """
-        # BUG: `function` annotated `Callable[..., str]`. Any return type works.
-        # BUG: unsupported parameter type raises bare `KeyError` that names only the type.
         self.function = function
         self.name = name or function.__name__
         self.description = description or inspect.getdoc(function) or ""
@@ -101,8 +106,7 @@ class PythonTool(Tool):
             JSON Schema of type `object`, one property per parameter.
 
         Raises:
-            TypeError: A parameter has no type hint.
-            KeyError: A parameter type is not in the table.
+            TypeError: A parameter has no type hint or the type is not supported.
         """
         JSON_TYPES = {str: "string", int: "integer", float: "number", bool: "boolean"}
 
@@ -114,6 +118,11 @@ class PythonTool(Tool):
             hint, desc = hints[name], None
             if get_origin(hint) is Annotated:
                 hint, desc = get_args(hint)[0], get_args(hint)[1]
+
+            # raise TypeError when type is not supported
+            if hint not in JSON_TYPES:
+                raise TypeError(f"{fn.__name__}: parameter '{name}' has unsupported type {hint!r}")
+
             prop = {"type": JSON_TYPES[hint]}
             if desc:
                 prop["description"] = desc
@@ -128,9 +137,12 @@ class PythonTool(Tool):
         }
 
 
-class ShellTool:
-    """Tool that runs shell commands on the local machine. No sandbox. Runs with the permissions of the current user."""
-    # BUG: does not subclass `Tool`.
+class ShellTool(Tool):
+    """Tool that runs shell commands on the local machine. No sandbox. Runs with the permissions of the current user.
+
+        This tool is generally outside of the intended permissions architecture. It is intended as a temporary escape hatch
+        for when the python based tools are inadequate.
+    """
     name = "shell"
     parameters = {
         "type": "object",

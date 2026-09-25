@@ -18,8 +18,7 @@ class OpenAIChat(Model):
     # NOTE: `Reasoning` not supported. Newer OpenAI models do not expose reasoning in this API.
     name = "openai-chat"
 
-    def __init__(self, model: str, base_url: str | None = None, api_key: str | None = None, strict: bool = True,
-                 **kwargs):
+    def __init__(self, model: str, base_url: str | None = None, api_key: str | None = None, **kwargs):
         """Make a Chat Completions model adapter.
 
         Args:
@@ -27,13 +26,10 @@ class OpenAIChat(Model):
             base_url: API URL. Set for OpenAI-compatible servers. Default: OpenAI
                 SDK default (`OPENAI_BASE_URL` or the OpenAI API).
             api_key: API key. Default: `OPENAI_API_KEY` environment variable.
-            strict: Not used.
             **kwargs: Extra arguments for each API call, for example `reasoning_effort`.
         """
-        # BUG: `strict` is stored but not used.
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
-        self.strict = strict
         self.kwargs = kwargs
 
     def query(self, messages: list[Message], tools: list[Tool] = None):
@@ -50,11 +46,10 @@ class OpenAIChat(Model):
         Returns:
             Model reply.
         """
-        # BUG: `tools=None` raises `TypeError`.
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[d for m in messages for d in self.render_message(m)],
-            tools=[self.render_tool(t) for t in tools],
+            tools=[self.render_tool(t) for t in tools or []],
             **self.kwargs
         )
 
@@ -216,5 +211,6 @@ class OpenAIResponses(Model):
             "type": "function",
             "name": tool.name,
             "description": tool.description,
-            "parameters": tool.parameters
+            "parameters": tool.parameters,
+            "strict": False, # API default's to true, which forces optional parameters to be required.
         }

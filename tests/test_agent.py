@@ -36,11 +36,16 @@ def test_text_reply_returns_immediately():
     assert len(agent.messages) == 3
 
 
+def test_no_system_prompt_adds_no_system_message():
+    agent = Agent(ScriptedModel(reply(Text("hello"))), [])
+    assert agent.messages == []
+
+
 def test_tool_call_loop():
     model = ScriptedModel(reply(ToolCall("c1", "add", {"a": 2, "b": 3})), reply(Text("5")))
     agent = Agent(model, [PythonTool(add)])
     assert agent("2+3?") == "5"
-    results = agent.messages[3]
+    results = next(m for m in agent.messages if isinstance(m, ToolResultMessage))
     assert isinstance(results, ToolResultMessage)
     assert results.tool_results[0].call_id == "c1"
     assert results.tool_results[0].content == "5"

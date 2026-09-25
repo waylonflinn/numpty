@@ -17,6 +17,12 @@ def test_file_round_trip(tmp_path):
     assert read_binary(path) == b"one two"
 
 
+def test_write_functions_return_characters_written(tmp_path):
+    path = str(tmp_path / "f.txt")
+    assert write_file(path, "one") == 3
+    assert append_file(path, " two") == 4
+
+
 def test_append_file_encoding(tmp_path):
     path = str(tmp_path / "f.txt")
     write_file(path, "é", encoding="latin-1")
@@ -34,9 +40,11 @@ def test_calculate():
     assert calculate("3 * sqrt(9) + 4") == 13.0
 
 
-def test_calculate_invalid_expression():
+@pytest.mark.parametrize("expression, error", [("3 +", SyntaxError), ("1/0", ZeroDivisionError)])
+def test_calculate_invalid_expression_raises(expression, error):
     pytest.importorskip("simpleeval")
-    assert calculate("3 +").startswith("Error parsing expression")
+    with pytest.raises(error):
+        calculate(expression)
 
 
 def test_calculate_tool_schema_does_not_need_simpleeval():

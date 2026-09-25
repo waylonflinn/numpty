@@ -2,6 +2,8 @@
 
 from abc import ABC, abstractmethod
 
+from numpty.messages import Message
+from numpty.tools import Tool
 
 class Model(ABC):
     """Chat model adapter for one provider API.
@@ -12,10 +14,10 @@ class Model(ABC):
     Attributes:
         name: Provider ID. First item of `origin` in replies.
     """
-    # BUG: `name` needed by every subclass. Not declared or enforced here.
+    name: str
 
     @abstractmethod
-    def query(self):
+    def query(self, messages: list[Message], tools: list[Tool] = None):
         """Send a conversation and the available tools to the model. Get one reply.
 
         Args:
@@ -25,5 +27,4 @@ class Model(ABC):
         Returns:
             `AssistantMessage` with `origin` set to `(provider, model)`.
         """
-        # BUG: signature has no `messages` or `tools`. Subclasses take `(messages, tools=None)`.
         pass

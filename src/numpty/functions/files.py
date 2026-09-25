@@ -17,8 +17,9 @@ def read_file(path: str, encoding: str = "utf-8"):
     return file_path.read_text(encoding=encoding)
 
 
-def read_binary(path):
+def read_binary(path:str):
     """Read a file as bytes.
+      Not meant for direct use as a model tool: output is raw bytes.
 
     Args:
         path: File path.
@@ -26,7 +27,6 @@ def read_binary(path):
     Returns:
         File contents.
     """
-    # BUG: `path` has no type hint. `PythonTool(read_binary)` raises `TypeError`.
     file_path = Path(path)
     return file_path.read_bytes()
 
@@ -38,10 +38,12 @@ def write_file(path: str, content: str, encoding: str = "utf-8"):
         path: File path. Parent directory must exist.
         content: Text to write.
         encoding: Text encoding.
+
+    Returns:
+        Number of characters written.
     """
-    # BUG: returns `None`. As a tool, the model gets `"None"`.
     file_path = Path(path)
-    file_path.write_text(content, encoding=encoding)
+    return file_path.write_text(content, encoding=encoding)
 
 
 def append_file(path: str, content: str, encoding: str = "utf-8"):
@@ -51,8 +53,10 @@ def append_file(path: str, content: str, encoding: str = "utf-8"):
         path: File path. Parent directory must exist.
         content: Text to add.
         encoding: Text encoding.
+
+    Returns:
+        Number of characters written.
     """
-    # BUG: returns `None`. As a tool, the model gets `"None"`.
     file_path = Path(path)
     with file_path.open(mode="a", encoding=encoding) as file:
-        file.write(content)
+        return file.write(content)

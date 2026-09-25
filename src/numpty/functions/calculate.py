@@ -46,10 +46,7 @@ def calculate(
 
     Raises:
         ImportError: `simpleeval` not installed.
+        Exception: Invalid expression (for example `SyntaxError`, `ZeroDivisionError`).
     """
-    # BUG: annotated `-> float`, but returns an error string for an invalid expression.
     evaluator = _evaluator()
-    try:
-        return float(evaluator.eval(expression))
-    except Exception as e:
-        return f"Error parsing expression: {str(e)}"
+    return float(evaluator.eval(expression))

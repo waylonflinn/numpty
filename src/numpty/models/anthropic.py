@@ -1,6 +1,6 @@
 """Anthropic adapter. Needs the `anthropic` extra."""
 
-from anthropic import Anthropic
+from anthropic import Anthropic, omit
 
 from numpty.messages import (AssistantMessage, Block, Message, Reasoning, SystemMessage, Text, ToolCall,
                              ToolResultMessage, UserMessage)
@@ -44,7 +44,7 @@ class AnthropicMessages(Model):
         response = self.client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
-            system=system,
+            system=system or omit,
             messages=[d for m in messages for d in self.render_message(m)],
             tools=[self.render_tool(t) for t in tools or []],
         )

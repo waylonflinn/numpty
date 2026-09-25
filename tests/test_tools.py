@@ -1,11 +1,20 @@
 from typing import Annotated
 
-from numpty import PythonTool, ShellTool
+import pytest
+
+from numpty import PythonTool, ShellTool, Tool
 
 
 def greet(name: Annotated[str, "Who to greet"], times: int = 1) -> str:
     """Say hello."""
     return "hi " * times + name
+
+
+def test_tool_constructor_sets_definition():
+    class Echo(Tool):
+        def run(self, arguments): return arguments
+    tool = Echo("echo", "Echo back.", {"type": "object"})
+    assert (tool.name, tool.description, tool.parameters) == ("echo", "Echo back.", {"type": "object"})
 
 
 def test_function_schema_types_descriptions_and_required():
@@ -44,6 +53,16 @@ def test_function_schema_requires_type_hints():
         assert "'x'" in str(e)
     else:
         raise AssertionError("expected TypeError")
+
+
+def test_function_schema_unsupported_type_names_parameter():
+    def listy(x: list[str]): pass
+    with pytest.raises(TypeError, match=r"listy.*'x'"):
+        PythonTool.function_schema(listy)
+
+
+def test_shell_tool_is_a_tool():
+    assert isinstance(ShellTool(), Tool)
 
 
 def test_shell_tool_runs_command():

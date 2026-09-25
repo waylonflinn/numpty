@@ -72,9 +72,8 @@ class AssistantMessage:
         origin: `(provider, model)` that made the reply. `Reasoning` blocks go back
             only to a model with the same origin.
     """
-    # BUG: `origin` annotated `str`. Holds a `(provider, model)` tuple.
     blocks: list[Block]
-    origin: str
+    origin: tuple[str, str]
 
     @property
     def tool_calls(self):

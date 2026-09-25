@@ -1,12 +1,13 @@
 """Offline tests of provider rendering and parsing. No API calls."""
 
+import inspect
 import subprocess
 import sys
 from types import SimpleNamespace
 
 import pytest
 
-from numpty import (AssistantMessage, PythonTool, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
+from numpty import (AssistantMessage, Model, PythonTool, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
                     ToolResultMessage, UserMessage)
 
 
@@ -28,6 +29,14 @@ def test_unknown_attribute():
     import numpty
     with pytest.raises(AttributeError):
         numpty.Nope
+
+
+@pytest.mark.parametrize("sdk, cls", [("anthropic", "AnthropicMessages"), ("openai", "OpenAIChat"),
+                                      ("openai", "OpenAIResponses")])
+def test_adapter_query_signature_matches_model(sdk, cls):
+    pytest.importorskip(sdk)
+    import numpty
+    assert inspect.signature(getattr(numpty, cls).query) == inspect.signature(Model.query)
 
 
 class TestAnthropic:
@@ -61,6 +70,15 @@ class TestAnthropic:
         assert model.parse_block(SimpleNamespace(type="tool_use", id="c", name="n", input={})) == ToolCall("c", "n", {})
         assert model.parse_block(SimpleNamespace(type="other")) is None
 
+    def test_query_without_system_omits_it(self, model):
+        sent = {}
+        def create(**kwargs):
+            sent.update(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text="hi")])
+        model.client = SimpleNamespace(messages=SimpleNamespace(create=create))
+        assert model.query([UserMessage("u")]).text == "hi"
+        assert sent["system"] is not None
+
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"name": "add", "description": "Add two numbers.",
                                            "input_schema": TOOL.parameters}
@@ -82,6 +100,12 @@ class TestOpenAIChat:
         assert model.render_message(ToolResultMessage([ToolResult("c1", "3"), ToolResult("c2", "4")])) == [
             {"role": "tool", "tool_call_id": "c1", "content": "3"},
             {"role": "tool", "tool_call_id": "c2", "content": "4"}]
+
+    def test_query_without_tools(self, model):
+        def create(**kwargs):
+            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="hi", tool_calls=None))])
+        model.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        assert model.query([UserMessage("u")]).text == "hi"
 
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"type": "function", "function": {
@@ -116,4 +140,4 @@ class TestOpenAIResponses:
 
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"type": "function", "name": "add", "description": "Add two numbers.",
-                                           "parameters": TOOL.parameters}
+                                           "parameters": TOOL.parameters, "strict": False}
