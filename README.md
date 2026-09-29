@@ -1,7 +1,10 @@
 # numpty
 
-A minimal, provider-neutral agent library: tools, messages, model adapters, and
-an agent loop.
+Simple (sort of) secure agency for your shallow semantic engine.
+
+*or, less alliteratively*
+
+A minimal, provider-neutral agent library with optional guardrails.
 
 ## Install
 
