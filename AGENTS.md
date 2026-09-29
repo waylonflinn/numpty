@@ -22,3 +22,33 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
+
+## Coordination conventions
+
+Tasks pass through a **Planning** status before In Progress: claim into
+Planning, record the plan, request review, and wait for approval before
+implementing.
+
+## Status lifecycle
+
+`To Do -> Planning -> In Progress -> Done`
+
+- **Claim:** the first write of a working session is
+  `backlog task edit <id> -s 'Planning' -a @<name>`. Where the CLI execution
+  guide says "mark it in progress," the active status for claiming in this
+  project is **Planning**.
+- **Planning phase:** research the system, draft the implementation plan
+  (`--plan`). If the work exceeds one session /
+  one reviewable outcome, create subtasks before requesting review; each
+  subtask passes through its own Planning gate.
+- **Planning is a review gate.** After recording the plan, stop. Do not move
+  the task to In Progress or write implementation code until the plan is
+  approved. Signal readiness:
+  `backlog task edit <id> --comment "Plan ready for review" --comment-author @<name>`.
+- **Approval:** a human approves in-session or by comment; only then
+  `backlog task edit <id> -s 'In Progress'`.
+- **Re-planning:** a material change of approach during implementation
+  returns the task to Planning and re-enters the gate.
+- **Queries:** plans awaiting review: `backlog task list -s Planning --plain`.
+  The frontier query is unchanged (To Do is the takeable pool; Planning tasks
+  are claimed, not takeable).

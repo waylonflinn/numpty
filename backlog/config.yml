@@ -1,6 +1,6 @@
 project_name: "numpty"
 default_status: "To Do"
-statuses: ["To Do", "In Progress", "Done"]
+statuses: ["To Do", "Planning", "In Progress", "Done"]
 labels: []
 definition_of_done: ["tests pass", "docstrings are up to date"]
 date_format: yyyy-mm-dd
