@@ -9,6 +9,8 @@ output:
     griffe_target: "numpty.tools.PythonTool"
   - filename: "ShellTool.md"
     griffe_target: "numpty.tools.ShellTool"
+  - filename: "Policy.md"
+    griffe_target: "numpty.policy.Policy"
   - filename: "Model.md"
     griffe_target: "numpty.models.Model"
   - filename: "AnthropicMessages.md"

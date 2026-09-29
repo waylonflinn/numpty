@@ -1,8 +1,11 @@
 """Agent loop."""
 
+from contextlib import nullcontext
+
 from numpty.messages import SystemMessage, ToolCall, ToolResult, ToolResultMessage, UserMessage
 from numpty.models import Model
-from numpty.tools import Tool
+from numpty.policy import Policy
+from numpty.tools import ShellTool, Tool
 
 
 class Agent:
@@ -12,19 +15,35 @@ class Agent:
         messages: Conversation history, oldest first. Starts with the system message, if given.
         tools: Tools by name.
         model: The model.
+        policy: Permissions for tool calls, or `None`.
     """
 
-    def __init__(self, model: Model, tools: list[Tool], system: str = ""):
+    def __init__(self, model: Model, tools: list[Tool], system: str = "", policy: Policy | None = None):
         """Make an agent.
 
         Args:
             model: Model to query.
             tools: Tools the model can call. Same name: last one wins.
             system: System prompt.
+            policy: Permissions for tool calls. Model queries are not checked. Default: `None`, no checks.
+
+        Raises:
+            ValueError: A tool starts processes (`ShellTool`) and `policy` does not allow processes.
         """
         self.model = model
         self.tools = {t.name: t for t in tools}
         self.messages = [SystemMessage(system)] if system else []
+        self.policy = policy
+        self._check_policy()
+
+    def _check_policy(self):
+        """Raise ValueError if a tool needs more than the policy allows. Fail at construction,
+        not on every call."""
+        # NOTE: special case until tools declare the policy they need.
+        if self.policy and Policy.Process.UNRESTRICTED not in self.policy.process:
+            for tool in self.tools.values():
+                if isinstance(tool, ShellTool):
+                    raise ValueError(f"tool '{tool.name}' starts processes: policy needs Policy.Process.UNRESTRICTED")
 
     def __call__(self, text, max_turns=5):
         """Send a user message. Run tool calls until the model replies without one.
@@ -65,13 +84,15 @@ class Agent:
             tool_call: Call to run.
 
         Returns:
-            Tool output converted to text. On failure (tool raises, or no tool
-            with that name): `is_error=True`, content `<ExceptionType>: <message>`.
+            Tool output converted to text. On failure (tool raises, no tool
+                with that name, or `policy` denies an action): `is_error=True`,
+                content `<ExceptionType>: <message>`.
         """
         try:
             tool = self.tools[tool_call.name]
 
-            result = str(tool.run(tool_call.arguments))
+            with self.policy.enforcement() if self.policy else nullcontext():
+                result = str(tool.run(tool_call.arguments))
             message = ToolResult(tool_call.id, result)
         except Exception as e:
             message = ToolResult(tool_call.id, f"{type(e).__name__}: {e}", is_error=True)

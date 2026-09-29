@@ -2,7 +2,7 @@
 
 Core: no dependencies. Provider adapters load their SDK on first use.
 `AnthropicMessages` needs the `anthropic` extra. `OpenAIChat` and
-`OpenAIResponses` need `openai`.
+`OpenAIResponses` need `openai`. A restrictive `Policy` needs `security`.
 """
 
 from importlib import import_module
@@ -11,6 +11,7 @@ from numpty.agent import Agent
 from numpty.messages import (AssistantMessage, Block, Message, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
                              ToolResultMessage, UserMessage)
 from numpty.models import Model
+from numpty.policy import Policy
 from numpty.tools import PythonTool, ShellTool, Tool
 
 _PROVIDERS = {
@@ -27,7 +28,7 @@ def __getattr__(name):
 
 
 __all__ = [
-    "Agent", "AssistantMessage", "Block", "Message", "Model", "PythonTool", "Reasoning", "ShellTool",
+    "Agent", "AssistantMessage", "Block", "Message", "Model", "Policy", "PythonTool", "Reasoning", "ShellTool",
     "SystemMessage", "Text", "Tool", "ToolCall", "ToolResult", "ToolResultMessage", "UserMessage",
     *_PROVIDERS,
 ]

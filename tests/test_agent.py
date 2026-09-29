@@ -1,5 +1,8 @@
-from numpty import (Agent, AssistantMessage, Model, PythonTool, SystemMessage, Text, ToolCall, ToolResultMessage,
-                    UserMessage)
+import pytest
+
+from numpty import (Agent, AssistantMessage, Model, Policy, PythonTool, ShellTool, SystemMessage, Text, ToolCall,
+                    ToolResultMessage, UserMessage)
+from numpty.functions import write_file
 
 
 def add(a: int, b: int) -> int:
@@ -87,3 +90,42 @@ def test_assistant_message_accessors():
     message = reply(Text("a"), ToolCall("c", "t", {}), Text("b"))
     assert message.text == "ab"
     assert message.tool_calls == [ToolCall("c", "t", {})]
+
+
+def test_policy_denial_becomes_error_result(tmp_path, monkeypatch):
+    pytest.importorskip("fastaudit")
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(ScriptedModel(), [PythonTool(write_file)], policy=Policy())
+    result = agent.run(ToolCall("c1", "write_file", {"path": "a.txt", "content": "x"}))
+    assert result.is_error
+    assert result.content.startswith("PermissionError")
+    assert not (tmp_path / "a.txt").exists()
+
+
+def test_policy_allows_permitted_tool_call(tmp_path, monkeypatch):
+    pytest.importorskip("fastaudit")
+    monkeypatch.chdir(tmp_path)
+    policy = Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION_TREE)
+    agent = Agent(ScriptedModel(), [PythonTool(write_file)], policy=policy)
+    result = agent.run(ToolCall("c1", "write_file", {"path": "a.txt", "content": "x"}))
+    assert not result.is_error
+    assert (tmp_path / "a.txt").read_text() == "x"
+
+
+def test_shell_tool_with_restricted_policy_raises():
+    pytest.importorskip("fastaudit")
+    with pytest.raises(ValueError, match="Process.UNRESTRICTED"):
+        Agent(ScriptedModel(), [ShellTool()], policy=Policy(Policy.Filesystem.UNRESTRICTED))
+
+
+def test_shell_tool_with_process_policy_runs():
+    pytest.importorskip("fastaudit")
+    agent = Agent(ScriptedModel(), [ShellTool()], policy=Policy(process=Policy.Process.UNRESTRICTED))
+    assert agent.run(ToolCall("c1", "shell", {"command": "echo hi"})).content == "hi\n"
+
+
+def test_no_policy_checks_nothing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(ScriptedModel(), [PythonTool(write_file), ShellTool()])
+    assert agent.policy is None
+    assert not agent.run(ToolCall("c1", "write_file", {"path": "a.txt", "content": "x"})).is_error

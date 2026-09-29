@@ -24,6 +24,32 @@
 {%- endfor %}
 {%- endif %}
 
+{%- set ns = namespace(has_classes=false) %}
+{%- for name, member in obj.members.items() %}
+{%- if not member.is_alias and member.kind.value == "class" and not name.startswith('_') %}
+{%- set ns.has_classes = true %}
+{%- endif %}
+{%- endfor %}
+{%- if ns.has_classes %}
+
+## Classes
+{%- for name, cls in obj.members.items() %}
+{%- if not cls.is_alias and cls.kind.value == "class" and not name.startswith('_') %}
+
+### {{ obj.name }}.{{ cls.name }} · _lines {{ cls.lineno }}–{{ cls.endlineno }}_
+{%- if cls.docstring %}
+
+{{ cls.docstring.value }}
+{%- endif %}
+{%- set members = cls.attributes.keys() | list %}
+{%- if members %}
+
+Members: {% for m in members if not m.startswith('_') %}`{{ m }}`{{ ", " if not loop.last }}{% endfor %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
 {%- set init = obj.members.get('__init__') %}
 {%- if init %}
 
