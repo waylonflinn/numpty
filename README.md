@@ -50,7 +50,7 @@ an error result.
 from numpty import Agent, AnthropicMessages, Policy, PythonTool
 from numpty.functions import read_file, write_file
 
-policy = Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION_TREE)
+policy = Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION)
 agent = Agent(AnthropicMessages("claude-sonnet-5"),
               [PythonTool(read_file), PythonTool(write_file)], policy=policy)
 ```

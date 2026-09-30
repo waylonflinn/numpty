@@ -12,11 +12,11 @@ class Policy:
 
     Scopes, on the flags that have one:
 
-    | Suffix           | Scope                                    |
-    |------------------|------------------------------------------|
-    | none             | everywhere                               |
-    | `_LOCATION_TREE` | current directory and all its subfolders |
-    | `_LOCATION`      | current directory only                   |
+    | Suffix             | Scope                                    |
+    |--------------------|------------------------------------------|
+    | none               | everywhere                               |
+    | `_LOCATION`        | current directory and all its subfolders |
+    | `_LOCATION_STRICT` | current directory only                   |
 
     Each check reads the current directory again. The policy does not store it.
 
@@ -31,9 +31,9 @@ class Policy:
     - Only one policy can be active at a time. Entering a different policy inside an active
       one is denied.
 
-    Supported combinations. Redundant flags are allowed, for example `READ_LOCATION` with `READ`.
+    Supported combinations. Redundant flags are allowed, for example `READ_LOCATION_STRICT` with `READ`.
 
-    - `filesystem`: `READ`, `READ | WRITE_LOCATION_TREE`, `READ | WRITE`, `UNRESTRICTED`
+    - `filesystem`: `READ`, `READ | WRITE_LOCATION`, `READ | WRITE`, `UNRESTRICTED`
     - `network`: none, `UNRESTRICTED`
     - `process`: none, `UNRESTRICTED`
 
@@ -47,23 +47,23 @@ class Policy:
         """Filesystem permissions. `WRITE` includes append."""
         READ = auto()
         READ_LOCATION = auto()
-        READ_LOCATION_TREE = auto()
+        READ_LOCATION_STRICT = auto()
         APPEND = auto()
         APPEND_LOCATION = auto()
-        APPEND_LOCATION_TREE = auto()
+        APPEND_LOCATION_STRICT = auto()
         WRITE = auto()
         WRITE_LOCATION = auto()
-        WRITE_LOCATION_TREE = auto()
+        WRITE_LOCATION_STRICT = auto()
         UNRESTRICTED = auto()
 
     class Network(Flag):
         """Network permissions."""
         READ = auto()
         READ_LOCATION = auto()
-        READ_LOCATION_TREE = auto()
+        READ_LOCATION_STRICT = auto()
         WRITE = auto()
         WRITE_LOCATION = auto()
-        WRITE_LOCATION_TREE = auto()
+        WRITE_LOCATION_STRICT = auto()
         UNRESTRICTED = auto()
 
     class Process(Flag):
@@ -115,7 +115,7 @@ class Policy:
         """Names of the flags that are set, with a slot prefix: `FS_`, `NET_`, `PROC_`.
 
         Returns:
-            Flag names, for example `["FS_READ", "FS_WRITE_LOCATION_TREE"]`.
+            Flag names, for example `["FS_READ", "FS_WRITE_LOCATION"]`.
         """
         slots = zip(_PREFIXES, (self.filesystem, self.network, self.process))
         return [prefix + flag.name for prefix, flags in slots for flag in flags]
@@ -156,8 +156,8 @@ _PREFIXES = {"FS_": Policy.Filesystem, "NET_": Policy.Network, "PROC_": Policy.P
 Policy.UNRESTRICTED = Policy(Policy.Filesystem.UNRESTRICTED, Policy.Network.UNRESTRICTED, Policy.Process.UNRESTRICTED)
 
 # Scopes, narrow to wide. fastaudit write roots for each write scope it can enforce.
-_NONE, _LOCATION, _LOCATION_TREE, _EVERYWHERE = range(4)
-_WRITE_ROOTS = {_NONE: (), _LOCATION_TREE: (".",), _EVERYWHERE: None}
+_NONE, _LOCATION_STRICT, _LOCATION, _EVERYWHERE = range(4)
+_WRITE_ROOTS = {_NONE: (), _LOCATION: (".",), _EVERYWHERE: None}
 
 # Audit event prefixes that each UNRESTRICTED slot allows. fastaudit denies them by default.
 # See https://docs.python.org/3/library/audit_events.html
@@ -168,7 +168,7 @@ _PROCESS_EVENTS = ("subprocess.", "_posixsubprocess.", "os.system", "os.exec", "
 
 def _scope(flags, kind, verb):
     """Widest scope that `flags` enables for `verb` (`"READ"`, `"APPEND"`, `"WRITE"`)."""
-    for suffix, scope in (("", _EVERYWHERE), ("_LOCATION_TREE", _LOCATION_TREE), ("_LOCATION", _LOCATION)):
+    for suffix, scope in (("", _EVERYWHERE), ("_LOCATION", _LOCATION), ("_LOCATION_STRICT", _LOCATION_STRICT)):
         if kind[verb + suffix] in flags:
             return scope
     return _NONE
@@ -190,7 +190,7 @@ def _fastaudit_enforcement(policy):
         # reads are not checked, so only read everywhere is exact. Write includes append.
         if read != _EVERYWHERE or append > write or write not in _WRITE_ROOTS:
             raise ValueError(f"cannot enforce filesystem permissions {policy.names()}. Supported: FS_READ, "
-                             "FS_READ | FS_WRITE_LOCATION_TREE, FS_READ | FS_WRITE, FS_UNRESTRICTED")
+                             "FS_READ | FS_WRITE_LOCATION, FS_READ | FS_WRITE, FS_UNRESTRICTED")
         roots = _WRITE_ROOTS[write]
 
     allowed = ()

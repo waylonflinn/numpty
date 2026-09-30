@@ -54,7 +54,7 @@ OUTSIDE = {"write_outside", "dotdot", "symlink", "pandas_outside"}
 
 POLICIES = {
     "read": (Policy(), {"read"}),
-    "write_tree": (Policy(FS.READ | FS.WRITE_LOCATION_TREE), {"read"} | IN_TREE),
+    "write_tree": (Policy(FS.READ | FS.WRITE_LOCATION), {"read"} | IN_TREE),
     "write": (Policy(FS.READ | FS.WRITE), {"read"} | IN_TREE | OUTSIDE),
     "fs_unrestricted": (Policy(FS.UNRESTRICTED), {"read"} | IN_TREE | OUTSIDE),
     "network": (Policy(network=NET.UNRESTRICTED), {"read", "network"}),
@@ -81,31 +81,31 @@ def test_no_checks_outside_enforcement(dirs):
 
 
 @pytest.mark.parametrize("flags", [
-    FS(0), FS.WRITE, FS.READ_LOCATION, FS.READ_LOCATION_TREE | FS.WRITE_LOCATION_TREE, FS.READ | FS.APPEND,
-    FS.READ | FS.APPEND_LOCATION_TREE, FS.READ | FS.WRITE_LOCATION, FS.READ | FS.APPEND | FS.WRITE_LOCATION_TREE,
+    FS(0), FS.WRITE, FS.READ_LOCATION_STRICT, FS.READ_LOCATION | FS.WRITE_LOCATION, FS.READ | FS.APPEND,
+    FS.READ | FS.APPEND_LOCATION, FS.READ | FS.WRITE_LOCATION_STRICT, FS.READ | FS.APPEND | FS.WRITE_LOCATION,
 ])
 def test_unenforceable_filesystem_raises(flags):
     with pytest.raises(ValueError, match="filesystem"):
         Policy(flags)
 
 
-@pytest.mark.parametrize("flags", [NET.READ, NET.WRITE, NET.READ_LOCATION_TREE])
+@pytest.mark.parametrize("flags", [NET.READ, NET.WRITE, NET.READ_LOCATION])
 def test_unenforceable_network_raises(flags):
     with pytest.raises(ValueError, match="network"):
         Policy(network=flags)
 
 
 @pytest.mark.parametrize("flags", [
-    FS.READ | FS.READ_LOCATION, FS.READ | FS.WRITE | FS.WRITE_LOCATION_TREE, FS.READ | FS.APPEND | FS.WRITE,
-    FS.READ | FS.APPEND_LOCATION | FS.WRITE_LOCATION_TREE, FS.UNRESTRICTED | FS.APPEND,
+    FS.READ | FS.READ_LOCATION_STRICT, FS.READ | FS.WRITE | FS.WRITE_LOCATION, FS.READ | FS.APPEND | FS.WRITE,
+    FS.READ | FS.APPEND_LOCATION_STRICT | FS.WRITE_LOCATION, FS.UNRESTRICTED | FS.APPEND,
 ])
 def test_redundant_flags_accepted(flags):
     Policy(flags)
 
 
 def test_names_round_trip():
-    policy = Policy(FS.READ | FS.WRITE_LOCATION_TREE, process=PROC.UNRESTRICTED)
-    assert policy.names() == ["FS_READ", "FS_WRITE_LOCATION_TREE", "PROC_UNRESTRICTED"]
+    policy = Policy(FS.READ | FS.WRITE_LOCATION, process=PROC.UNRESTRICTED)
+    assert policy.names() == ["FS_READ", "FS_WRITE_LOCATION", "PROC_UNRESTRICTED"]
     again = Policy.from_names(policy.names())
     assert (again.filesystem, again.network, again.process) == (policy.filesystem, policy.network, policy.process)
 

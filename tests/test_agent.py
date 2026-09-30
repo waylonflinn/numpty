@@ -105,7 +105,7 @@ def test_policy_denial_becomes_error_result(tmp_path, monkeypatch):
 def test_policy_allows_permitted_tool_call(tmp_path, monkeypatch):
     pytest.importorskip("fastaudit")
     monkeypatch.chdir(tmp_path)
-    policy = Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION_TREE)
+    policy = Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION)
     agent = Agent(ScriptedModel(), [PythonTool(write_file)], policy=policy)
     result = agent.run(ToolCall("c1", "write_file", {"path": "a.txt", "content": "x"}))
     assert not result.is_error
