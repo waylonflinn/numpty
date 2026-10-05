@@ -4,6 +4,7 @@ title: Agent Informed About Policy
 status: To Do
 assignee: []
 created_date: '2026-09-29 21:22'
+updated_date: '2026-09-30 23:24'
 labels: []
 dependencies:
   - NUMP-008
@@ -38,3 +39,9 @@ Facts: `AnthropicMessages` and `OpenAIResponses` send only the first `SystemMess
 - [ ] #1 tests pass
 - [ ] #2 docstrings are up to date
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Planning NUMP-009 (2026-09-30): Policy gets a Process.C_EXTENSIONS flag (replaces monitor_calls). fastaudit allows a short safe list of C extensions (numpy, pandas, PIL, matplotlib, orjson, pydantic-core) even without the flag. Wanted here: a Policy property that exposes that list, and the description text tells the model which extensions it can use.
+<!-- SECTION:NOTES:END -->

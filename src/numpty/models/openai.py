@@ -14,8 +14,9 @@ class OpenAIChat(Model):
     """Model adapter for the OpenAI Chat Completions API. Needs the `openai` extra.
 
     Also works with OpenAI-compatible servers, for example local models. Set `base_url`.
+    Reasoning comes from the `reasoning_content` reply field, which local servers
+    (llama.cpp, vLLM) and DeepSeek set. Hosted OpenAI models do not expose reasoning here.
     """
-    # NOTE: `Reasoning` not supported. Newer OpenAI models do not expose reasoning in this API.
     name = "openai-chat"
 
     def __init__(self, model: str, base_url: str | None = None, api_key: str | None = None, **kwargs):
@@ -37,7 +38,8 @@ class OpenAIChat(Model):
 
         - System prompt: every `SystemMessage` is sent, in place.
         - `ToolResult.is_error`: not sent. The model sees only `content`.
-        - `Reasoning`: not read from replies. Not sent.
+        - `Reasoning`: read from `reasoning_content`, if the reply has it. Sent back only
+          if `origin` is `("openai-chat", <this model>)`.
 
         Args:
             messages: Conversation history, oldest first.
@@ -55,6 +57,8 @@ class OpenAIChat(Model):
 
         message = response.choices[0].message
         blocks = []
+        if reasoning := getattr(message, "reasoning_content", None):
+            blocks.append(Reasoning({"reasoning_content": reasoning}))
         if message.content:
             blocks.append(Text(message.content))
         for c in message.tool_calls or []:
@@ -70,12 +74,18 @@ class OpenAIChat(Model):
 
         Returns:
             Chat messages. One per tool result for `ToolResultMessage`, else one.
+            `Reasoning` from this model's origin is merged into the assistant message.
+            Other origins: dropped.
         """
         match message:
             case SystemMessage():    return [{"role": "system",    "content": message.content}]
             case UserMessage():      return [{"role": "user",      "content": message.content}]
             case AssistantMessage():
                 rendered = {"role": "assistant", "content": message.text}
+                if message.origin == (self.name, self.model):
+                    for block in message.blocks:
+                        if isinstance(block, Reasoning):
+                            rendered.update(block.data)
                 if message.tool_calls:
                     rendered["tool_calls"] = [
                         {"id": c.id, "type": "function",

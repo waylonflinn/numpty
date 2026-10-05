@@ -101,11 +101,25 @@ class TestOpenAIChat:
             {"role": "tool", "tool_call_id": "c1", "content": "3"},
             {"role": "tool", "tool_call_id": "c2", "content": "4"}]
 
+    def test_reasoning_only_replayed_to_origin(self, model):
+        reasoning = Reasoning({"reasoning_content": "hm"})
+        assert model.render_message(AssistantMessage([reasoning, Text("t")], ("openai-chat", "gpt-test"))) == [
+            {"role": "assistant", "content": "t", "reasoning_content": "hm"}]
+        assert model.render_message(AssistantMessage([reasoning, Text("t")], ("openai-chat", "other"))) == [
+            {"role": "assistant", "content": "t"}]
+
     def test_query_without_tools(self, model):
         def create(**kwargs):
             return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="hi", tool_calls=None))])
         model.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
         assert model.query([UserMessage("u")]).text == "hi"
+
+    def test_query_parses_reasoning_content(self, model):
+        def create(**kwargs):
+            message = SimpleNamespace(content="hi", reasoning_content="hm", tool_calls=None)
+            return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+        model.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        assert model.query([UserMessage("u")]).blocks == [Reasoning({"reasoning_content": "hm"}), Text("hi")]
 
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"type": "function", "function": {

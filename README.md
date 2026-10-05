@@ -35,6 +35,50 @@ agent = Agent(AnthropicMessages("claude-sonnet-5"),
 agent("Read 'income.csv'. How much income did Bob have in total?")
 ```
 
+`OpenAIChat` and `OpenAIResponses` work the same way. API key: `OPENAI_API_KEY`.
+
+```python
+from numpty import Agent, OpenAIChat, PythonTool
+from numpty.functions import calculate
+
+agent = Agent(OpenAIChat("gpt-5"), [PythonTool(calculate)])
+agent("What is 17 * 25?")
+```
+
+## Local models
+
+`OpenAIChat` works with OpenAI-compatible servers. Set `base_url`. Tested with Qwen 3.8
+on [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server`, started with
+`--jinja` so the server parses tool calls and separates reasoning from text.
+
+```python
+from numpty import Agent, OpenAIChat, PythonTool
+from numpty.functions import calculate
+
+model = OpenAIChat("qwen-38-27b-Q4", base_url="http://localhost:8080/v1", api_key="none",
+                   reasoning_effort="medium")
+agent = Agent(model, [PythonTool(calculate)])
+agent("What is 17 * 25?")
+```
+
+Extra keyword arguments go into every request. `reasoning_effort` sets the thinking
+budget. Qwen 3.8 accepts `low`, `medium`, and `xhigh`. The default is `xhigh`, which
+is slow on consumer hardware. llama.cpp forwards this parameter from build b11429.
+Older builds ignore it. There, use
+`extra_body={"chat_template_kwargs": {"reasoning_effort": "medium"}}`.
+
+A reply's `reasoning_content` becomes a `Reasoning` block and goes back on later turns
+of the same model. The server's chat template decides whether the model sees it. For
+Qwen 3.8 this is `preserve_thinking`, which can be set per request:
+`extra_body={"chat_template_kwargs": {"preserve_thinking": False}}`.
+
+Limits:
+
+- `<think>` tags inside reply text are not parsed. Without `--jinja`, reasoning stays
+  in the text.
+- Hosted OpenAI models do not return `reasoning_content`. Use `OpenAIResponses` for
+  reasoning with those.
+
 ## Permissions
 
 The [fastaudit](https://github.com/AnswerDotAI/fastaudit) library is used for adding

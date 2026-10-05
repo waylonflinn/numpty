@@ -4,6 +4,7 @@ title: Add `run_python` function
 status: To Do
 assignee: []
 created_date: '2026-09-24 16:02'
+updated_date: '2026-10-01 15:26'
 labels: []
 dependencies: []
 ordinal: 1000
@@ -29,3 +30,9 @@ Add a `run_python(code)` function to `numpty.functions` that runs Python code in
 - [ ] #1 tests pass
 - [ ] #2 docstrings are up to date
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Superseded by NUMP-009 (2026-10-01): `run(code, policy, location, timeout)` in numpty/run.py plus `RunTool`. The policy-bearing function is not PythonTool-wrappable, so a Tool subclass replaces AC#4.
+<!-- SECTION:NOTES:END -->
