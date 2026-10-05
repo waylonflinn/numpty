@@ -45,7 +45,7 @@ class Agent:
                 if isinstance(tool, ShellTool):
                     raise ValueError(f"tool '{tool.name}' starts processes: policy needs Policy.Process.UNRESTRICTED")
 
-    def __call__(self, text, max_turns=5):
+    def __call__(self, text, max_turns=5, schema: dict | None = None):
         """Send a user message. Run tool calls until the model replies without one.
 
         Each turn: query the model, then run all tool calls in the reply.
@@ -53,25 +53,29 @@ class Agent:
         Args:
             text: User message.
             max_turns: Maximum model queries for this message.
+            schema: JSON Schema the final reply must conform to. Passed to `Model.query`
+                on every turn. `None` for a free-text reply.
 
         Returns:
-            Text of the final reply.
+            Text of the final reply. With `schema`: the reply's object, a `dict`.
 
         Raises:
             RuntimeError: Model still calls tools after `max_turns` queries. History
                 keeps all turns, ending with tool results.
+            ValueError: `schema` was given and the model returned no conforming object.
+                See `Model.query`.
         """
         # NOTE: model API errors propagate. The user message stays in history with no
         # reply, so a retry adds a second user message in a row.
         self.messages.append(UserMessage(text))
 
         for _ in range(max_turns):
-            reply = self.model.query(self.messages, list(self.tools.values()))
+            reply = self.model.query(self.messages, list(self.tools.values()), schema)
             self.messages.append(reply)
 
             # non-tool call response, return
             if not reply.tool_calls:
-                return reply.text
+                return reply.text if schema is None else reply.object
 
             self.messages.append(ToolResultMessage([self.run(c) for c in reply.tool_calls]))
 

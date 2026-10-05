@@ -39,7 +39,17 @@ class Reasoning:
     data: dict
 
 
-Block = Text | ToolCall | Reasoning
+@dataclass
+class Object:
+    """Parsed reply that conforms to the schema the caller gave `Model.query`.
+
+    Attributes:
+        value: The JSON object, as a `dict`.
+    """
+    value: dict
+
+
+Block = Text | ToolCall | Reasoning | Object
 """One content item in an assistant reply."""
 
 
@@ -84,6 +94,13 @@ class AssistantMessage:
     def text(self):
         """`Text` blocks joined with no separator. `""` if none."""
         return "".join(b.text for b in self.blocks if isinstance(b, Text))
+
+    # NOTE: keep this property last. Its name shadows the builtin `object` for the rest
+    # of the class body (not inside methods). Nothing may follow it here.
+    @property
+    def object(self):
+        """`value` of the `Object` block. `None` if the reply has none."""
+        return next((b.value for b in self.blocks if isinstance(b, Object)), None)
 
 
 @dataclass

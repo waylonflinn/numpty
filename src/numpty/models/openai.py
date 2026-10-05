@@ -4,7 +4,7 @@ import json
 
 from openai import OpenAI
 
-from numpty.messages import (AssistantMessage, Block, Message, Reasoning, SystemMessage, Text, ToolCall,
+from numpty.messages import (AssistantMessage, Block, Message, Object, Reasoning, SystemMessage, Text, ToolCall,
                              ToolResultMessage, UserMessage)
 from numpty.models import Model
 from numpty.tools import Tool
@@ -33,29 +33,41 @@ class OpenAIChat(Model):
         self.model = model
         self.kwargs = kwargs
 
-    def query(self, messages: list[Message], tools: list[Tool] = None):
+    def query(self, messages: list[Message], tools: list[Tool] = None, schema: dict | None = None):
         """Send a conversation and the available tools to the model. Get one reply.
 
         - System prompt: every `SystemMessage` is sent, in place.
         - `ToolResult.is_error`: not sent. The model sees only `content`.
         - `Reasoning`: read from `reasoning_content`, if the reply has it. Sent back only
           if `origin` is `("openai-chat", <this model>)`.
+        - `schema`: sent as a strict `response_format`. The reply's content is parsed to an `Object`.
 
         Args:
             messages: Conversation history, oldest first.
             tools: Tools the model can call.
+            schema: JSON Schema for the reply. `None` for a free-text reply.
 
         Returns:
             Model reply.
+
+        Raises:
+            ValueError: `schema` was given and the model refused, `finish_reason` is `length`,
+                or the reply is not a JSON object.
         """
+        kwargs = dict(self.kwargs)
+        if schema is not None:
+            kwargs["response_format"] = {"type": "json_schema",
+                                         "json_schema": {"name": "output", "schema": schema, "strict": True}}
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[d for m in messages for d in self.render_message(m)],
             tools=[self.render_tool(t) for t in tools or []],
-            **self.kwargs
+            **kwargs
         )
 
-        message = response.choices[0].message
+        choice = response.choices[0]
+        message = choice.message
         blocks = []
         if reasoning := getattr(message, "reasoning_content", None):
             blocks.append(Reasoning({"reasoning_content": reasoning}))
@@ -63,8 +75,16 @@ class OpenAIChat(Model):
             blocks.append(Text(message.content))
         for c in message.tool_calls or []:
             blocks.append(ToolCall(c.id, c.function.name, json.loads(c.function.arguments)))
+        reply = AssistantMessage(blocks=blocks, origin=(self.name, self.model))
 
-        return AssistantMessage(blocks=blocks, origin=(self.name, self.model))
+        if schema is not None and not reply.tool_calls:
+            if (refusal := getattr(message, "refusal", None)) or choice.finish_reason == "content_filter":
+                raise ValueError("model refused structured output" + (f": {refusal}" if refusal else ""))
+            if choice.finish_reason == "length":
+                raise ValueError(f"structured output truncated at max_tokens: {reply.text[:200]!r}")
+            reply = self.parse_object(reply)
+
+        return reply
 
     def render_message(self, message: Message) -> list[dict]:
         """Convert a numpty message to Chat Completions format.
@@ -75,13 +95,14 @@ class OpenAIChat(Model):
         Returns:
             Chat messages. One per tool result for `ToolResultMessage`, else one.
             `Reasoning` from this model's origin is merged into the assistant message.
-            Other origins: dropped.
+            Other origins: dropped. An `Object` becomes the JSON content.
         """
         match message:
             case SystemMessage():    return [{"role": "system",    "content": message.content}]
             case UserMessage():      return [{"role": "user",      "content": message.content}]
             case AssistantMessage():
-                rendered = {"role": "assistant", "content": message.text}
+                content = message.text if message.object is None else json.dumps(message.object)
+                rendered = {"role": "assistant", "content": content}
                 if message.origin == (self.name, self.model):
                     for block in message.blocks:
                         if isinstance(block, Reasoning):
@@ -131,33 +152,55 @@ class OpenAIResponses(Model):
         self.client = OpenAI()
         self.reasoning = {"effort": reasoning_effort}
 
-    def query(self, messages: list[Message], tools: list[Tool] = None):
+    def query(self, messages: list[Message], tools: list[Tool] = None, schema: dict | None = None):
         """Send a conversation and the available tools to the model. Get one reply.
 
         - System prompt: first `SystemMessage` only. Others are ignored.
         - `ToolResult.is_error`: not sent. The model sees only `content`.
         - `Reasoning`: sent back only if `origin` is `("openai-responses", <this model>)`.
         - Unknown output item types: dropped.
+        - `schema`: sent as a strict `text.format`. The reply's text is parsed to an `Object`.
 
         Args:
             messages: Conversation history, oldest first.
             tools: Tools the model can call. `None` for no tools.
+            schema: JSON Schema for the reply. `None` for a free-text reply.
 
         Returns:
             Model reply.
+
+        Raises:
+            ValueError: `schema` was given and the model refused, `status` is `incomplete`,
+                or the reply is not a JSON object.
         """
         system = next((m.content for m in messages if isinstance(m, SystemMessage)), None)
+
+        kwargs = {}
+        if schema is not None:
+            kwargs["text"] = {"format": {"type": "json_schema", "name": "output", "schema": schema, "strict": True}}
 
         response = self.client.responses.create(
             model=self.model,
             instructions=system,
             input=[d for m in messages for d in self.render_message(m)],
             tools=[self.render_tool(t) for t in tools or []],
-            reasoning=self.reasoning
+            reasoning=self.reasoning,
+            **kwargs
         )
 
         blocks = [b for item in response.output if (b := self.parse_item(item))]
-        return AssistantMessage(blocks=blocks, origin=(self.name, self.model))
+        reply = AssistantMessage(blocks=blocks, origin=(self.name, self.model))
+
+        if schema is not None and not reply.tool_calls:
+            refusals = [c.refusal for item in response.output if item.type == "message"
+                        for c in item.content if c.type == "refusal"]
+            if refusals:
+                raise ValueError(f"model refused structured output: {refusals[0]}")
+            if getattr(response, "status", None) == "incomplete":
+                raise ValueError(f"structured output truncated at max_tokens: {reply.text[:200]!r}")
+            reply = self.parse_object(reply)
+
+        return reply
 
     def parse_item(self, item) -> Block | None:
         """Convert a Responses output item to a numpty block.
@@ -200,10 +243,12 @@ class OpenAIResponses(Model):
             origin: `origin` of the message that holds the block.
 
         Returns:
-            Input item. `None` for `Reasoning` from a different origin.
+            Input item. `Object` becomes an assistant message of its JSON. `None` for
+            `Reasoning` from a different origin.
         """
         match block:
             case Text():      return {"role": "assistant", "content": block.text}
+            case Object():    return {"role": "assistant", "content": json.dumps(block.value)}
             case ToolCall():  return {"type": "function_call", "call_id": block.id,
                                       "name": block.name, "arguments": json.dumps(block.arguments)}
             case Reasoning(): return block.data if origin == (self.name, self.model) else None

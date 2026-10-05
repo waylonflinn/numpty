@@ -1,8 +1,10 @@
 """Anthropic adapter. Needs the `anthropic` extra."""
 
+import json
+
 from anthropic import Anthropic, omit
 
-from numpty.messages import (AssistantMessage, Block, Message, Reasoning, SystemMessage, Text, ToolCall,
+from numpty.messages import (AssistantMessage, Block, Message, Object, Reasoning, SystemMessage, Text, ToolCall,
                              ToolResultMessage, UserMessage)
 from numpty.models import Model
 from numpty.tools import Tool
@@ -24,20 +26,26 @@ class AnthropicMessages(Model):
         self.model = model
         self.max_tokens = max_tokens
 
-    def query(self, messages: list[Message], tools: list[Tool] = None):
+    def query(self, messages: list[Message], tools: list[Tool] = None, schema: dict | None = None):
         """Send a conversation and the available tools to the model. Get one reply.
 
         - System prompt: first `SystemMessage` only. Others are ignored.
         - `ToolResult.is_error`: sent to the model.
         - `Reasoning`: sent back only if `origin` is `("anthropic", <this model>)`.
         - Unknown reply block types: dropped.
+        - `schema`: sent as `output_config.format`. The reply's text is parsed to an `Object`.
 
         Args:
             messages: Conversation history, oldest first.
             tools: Tools the model can call. `None` for no tools.
+            schema: JSON Schema for the reply. `None` for a free-text reply.
 
         Returns:
             Model reply.
+
+        Raises:
+            ValueError: `schema` was given and `stop_reason` is `refusal` or `max_tokens`,
+                or the reply is not a JSON object.
         """
         system = next((m.content for m in messages if isinstance(m, SystemMessage)), None)
 
@@ -47,11 +55,19 @@ class AnthropicMessages(Model):
             system=system or omit,
             messages=[d for m in messages for d in self.render_message(m)],
             tools=[self.render_tool(t) for t in tools or []],
+            output_config={"format": {"type": "json_schema", "schema": schema}} if schema is not None else omit,
         )
 
         blocks = [b for c in response.content if (b := self.parse_block(c))]
+        reply = AssistantMessage(blocks=blocks, origin=(self.name, self.model))
 
-        return AssistantMessage(blocks=blocks, origin=(self.name, self.model))
+        if schema is not None and not reply.tool_calls:
+            match response.stop_reason:
+                case "refusal":    raise ValueError("model refused structured output")
+                case "max_tokens": raise ValueError(f"structured output truncated at max_tokens: {reply.text[:200]!r}")
+            reply = self.parse_object(reply)
+
+        return reply
 
     def parse_block(self, block) -> Block | None:
         """Convert an Anthropic reply content block to a numpty block.
@@ -98,10 +114,12 @@ class AnthropicMessages(Model):
             origin: `origin` of the message that holds the block.
 
         Returns:
-            Anthropic content block. `None` for `Reasoning` from a different origin.
+            Anthropic content block. `Object` becomes a text block of its JSON. `None` for
+            `Reasoning` from a different origin.
         """
         match block:
             case Text():      return {"type": "text", "text": block.text}
+            case Object():    return {"type": "text", "text": json.dumps(block.value)}
             case ToolCall():  return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.arguments}
             case Reasoning(): return block.data if origin == (self.name, self.model) else None
 

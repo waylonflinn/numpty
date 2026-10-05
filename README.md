@@ -45,6 +45,40 @@ agent = Agent(OpenAIChat("gpt-5"), [PythonTool(calculate)])
 agent("What is 17 * 25?")
 ```
 
+## Structured output
+
+Pass a JSON Schema as `schema`. The reply is a `dict` that conforms to it, instead of text.
+Tools still work: the model may call tools first; the object comes on the final turn.
+
+```python
+schema = {
+    "type": "object",
+    "properties": {
+        "city": {"type": "string"},
+        "population": {"type": "integer"},
+    },
+    "required": ["city", "population"],
+    "additionalProperties": False,
+}
+agent("What is the largest city in Portugal?", schema=schema)
+# {'city': 'Lisbon', 'population': 545923}
+```
+
+Every provider accepts this subset: root `object` with `properties`, all of them in
+`required`, and `additionalProperties: false`; `string`, `integer`, `number`, `boolean`,
+`null`; `enum`; `array` with `items`; `description`. No numeric or length constraints, no
+optional properties, no recursion. For an optional value, use `"type": ["string", "null"]`.
+
+The schema is sent as given. Each provider constrains output on its side (strict mode, or a
+grammar for local models). Out of subset: the provider rejects the request. The model
+refused, hit the token limit, or returned something that is not a JSON object: `ValueError`.
+A server without strict mode may return JSON that does not conform; it is returned as-is.
+
+Without an agent: `model.query(messages, schema=schema).object`.
+
+On llama.cpp, a schema takes precedence over `tools`: the model cannot call tools on that
+turn, and Qwen templates reject the request (see Local models).
+
 ## Local models
 
 `OpenAIChat` works with OpenAI-compatible servers. Set `base_url`. Tested with Qwen 3.8
@@ -78,6 +112,11 @@ Limits:
   in the text.
 - Hosted OpenAI models do not return `reasoning_content`. Use `OpenAIResponses` for
   reasoning with those.
+- `schema` and `tools` in one request: the server constrains the reply to the schema and
+  does not parse tool calls, so an agent with tools gets no tool turns. Qwen 3.6 and 3.8
+  templates go further and reject the request with `failed to parse grammar`
+  ([issue 27114](https://github.com/ggml-org/llama.cpp/issues/27114), closed as by design;
+  Gemma 4 accepts it). Checked on build b11429. Use `schema` with an agent that has no tools.
 
 ## Permissions
 

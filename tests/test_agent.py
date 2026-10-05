@@ -1,6 +1,6 @@
 import pytest
 
-from numpty import (Agent, AssistantMessage, Model, Policy, PythonTool, ShellTool, SystemMessage, Text, ToolCall,
+from numpty import (Agent, AssistantMessage, Model, Object, Policy, PythonTool, ShellTool, SystemMessage, Text, ToolCall,
                     ToolResultMessage, UserMessage)
 from numpty.functions import write_file
 
@@ -22,8 +22,8 @@ class ScriptedModel(Model):
         self.replies = list(replies)
         self.calls = []
 
-    def query(self, messages, tools=None):
-        self.calls.append((list(messages), tools))
+    def query(self, messages, tools=None, schema=None):
+        self.calls.append((list(messages), tools, schema))
         return self.replies.pop(0)
 
 
@@ -90,6 +90,31 @@ def test_assistant_message_accessors():
     message = reply(Text("a"), ToolCall("c", "t", {}), Text("b"))
     assert message.text == "ab"
     assert message.tool_calls == [ToolCall("c", "t", {})]
+    assert message.object is None
+    assert reply(Object({"a": 1})).object == {"a": 1}
+
+
+SCHEMA = {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"], "additionalProperties": False}
+
+
+def test_schema_returns_object():
+    model = ScriptedModel(reply(Object({"n": 5})))
+    agent = Agent(model, [])
+    assert agent("n?", schema=SCHEMA) == {"n": 5}
+    assert model.calls[0][2] is SCHEMA
+
+
+def test_schema_passed_every_turn():
+    model = ScriptedModel(reply(ToolCall("c1", "add", {"a": 2, "b": 3})), reply(Object({"n": 5})))
+    agent = Agent(model, [PythonTool(add)])
+    assert agent("2+3?", schema=SCHEMA) == {"n": 5}
+    assert [c[2] for c in model.calls] == [SCHEMA, SCHEMA]
+
+
+def test_no_schema_passes_none_and_returns_text():
+    model = ScriptedModel(reply(Text("hello")))
+    assert Agent(model, [])("hi") == "hello"
+    assert model.calls[0][2] is None
 
 
 def test_policy_denial_becomes_error_result(tmp_path, monkeypatch):

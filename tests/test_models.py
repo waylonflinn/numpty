@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from numpty import (AssistantMessage, Model, PythonTool, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
+from numpty import (AssistantMessage, Model, Object, PythonTool, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
                     ToolResultMessage, UserMessage)
 
 
@@ -17,6 +17,7 @@ def add(a: int, b: int) -> int:
 
 
 TOOL = PythonTool(add)
+SCHEMA = {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"], "additionalProperties": False}
 
 
 def test_core_import_does_not_load_provider_sdks():
@@ -29,6 +30,18 @@ def test_unknown_attribute():
     import numpty
     with pytest.raises(AttributeError):
         numpty.Nope
+
+
+def test_parse_object_replaces_text_keeps_other_blocks():
+    reasoning = Reasoning({"r": 1})
+    reply = AssistantMessage([reasoning, Text('{"n": '), Text("5}")], ("p", "m"))
+    assert Model.parse_object(reply) == AssistantMessage([reasoning, Object({"n": 5})], ("p", "m"))
+
+
+@pytest.mark.parametrize("text, message", [("nope", "not valid JSON"), ("[1]", "not a JSON object")])
+def test_parse_object_rejects_bad_text(text, message):
+    with pytest.raises(ValueError, match=message):
+        Model.parse_object(AssistantMessage([Text(text)], ("p", "m")))
 
 
 @pytest.mark.parametrize("sdk, cls", [("anthropic", "AnthropicMessages"), ("openai", "OpenAIChat"),
@@ -83,6 +96,45 @@ class TestAnthropic:
         assert model.render_tool(TOOL) == {"name": "add", "description": "Add two numbers.",
                                            "input_schema": TOOL.parameters}
 
+    def test_render_object_as_text(self, model):
+        assert model.render_block(Object({"n": 5}), ("anthropic", "claude-test")) == {"type": "text", "text": '{"n": 5}'}
+
+    @staticmethod
+    def stub(model, text, stop_reason="end_turn"):
+        sent = {}
+        def create(**kwargs):
+            sent.update(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)], stop_reason=stop_reason)
+        model.client = SimpleNamespace(messages=SimpleNamespace(create=create))
+        return sent
+
+    def test_schema_renders_and_parses(self, model):
+        sent = self.stub(model, '{"n": 5}')
+        reply = model.query([UserMessage("u")], schema=SCHEMA)
+        assert sent["output_config"] == {"format": {"type": "json_schema", "schema": SCHEMA}}
+        assert reply.blocks == [Object({"n": 5})]
+        assert reply.object == {"n": 5}
+
+    def test_no_schema_omits_output_config(self, model):
+        from anthropic import omit
+        sent = self.stub(model, "hi")
+        assert model.query([UserMessage("u")]).text == "hi"
+        assert sent["output_config"] is omit
+
+    def test_schema_with_tool_call_leaves_turn_alone(self, model):
+        def create(**kwargs):
+            return SimpleNamespace(content=[SimpleNamespace(type="tool_use", id="c", name="add", input={})],
+                                   stop_reason="tool_use")
+        model.client = SimpleNamespace(messages=SimpleNamespace(create=create))
+        assert model.query([UserMessage("u")], [TOOL], SCHEMA).tool_calls == [ToolCall("c", "add", {})]
+
+    @pytest.mark.parametrize("stop_reason, text, message", [
+        ("refusal", "", "refused"), ("max_tokens", '{"n"', "truncated"), ("end_turn", "oops", "not valid JSON")])
+    def test_schema_failures_raise(self, model, stop_reason, text, message):
+        self.stub(model, text, stop_reason)
+        with pytest.raises(ValueError, match=message):
+            model.query([UserMessage("u")], schema=SCHEMA)
+
 
 class TestOpenAIChat:
     @pytest.fixture
@@ -121,6 +173,40 @@ class TestOpenAIChat:
         model.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
         assert model.query([UserMessage("u")]).blocks == [Reasoning({"reasoning_content": "hm"}), Text("hi")]
 
+    def test_render_object_as_content(self, model):
+        assert model.render_message(AssistantMessage([Object({"n": 5})], ("openai-chat", "gpt-test"))) == [
+            {"role": "assistant", "content": '{"n": 5}'}]
+
+    @staticmethod
+    def stub(model, content, finish_reason="stop", refusal=None):
+        sent = {}
+        def create(**kwargs):
+            sent.update(kwargs)
+            message = SimpleNamespace(content=content, tool_calls=None, refusal=refusal)
+            return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason=finish_reason)])
+        model.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        return sent
+
+    def test_schema_renders_and_parses(self, model):
+        sent = self.stub(model, '{"n": 5}')
+        reply = model.query([UserMessage("u")], schema=SCHEMA)
+        assert sent["response_format"] == {"type": "json_schema",
+                                           "json_schema": {"name": "output", "schema": SCHEMA, "strict": True}}
+        assert reply.blocks == [Object({"n": 5})]
+
+    def test_no_schema_omits_response_format(self, model):
+        sent = self.stub(model, "hi")
+        assert model.query([UserMessage("u")]).text == "hi"
+        assert "response_format" not in sent
+
+    @pytest.mark.parametrize("finish_reason, content, refusal, message", [
+        ("stop", None, "no", "refused structured output: no"), ("content_filter", None, None, "refused"),
+        ("length", '{"n"', None, "truncated"), ("stop", "oops", None, "not valid JSON")])
+    def test_schema_failures_raise(self, model, finish_reason, content, refusal, message):
+        self.stub(model, content, finish_reason, refusal)
+        with pytest.raises(ValueError, match=message):
+            model.query([UserMessage("u")], schema=SCHEMA)
+
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"type": "function", "function": {
             "name": "add", "description": "Add two numbers.", "parameters": TOOL.parameters}}
@@ -155,3 +241,36 @@ class TestOpenAIResponses:
     def test_render_tool(self, model):
         assert model.render_tool(TOOL) == {"type": "function", "name": "add", "description": "Add two numbers.",
                                            "parameters": TOOL.parameters, "strict": False}
+
+    def test_render_object_as_assistant_message(self, model):
+        assert model.render_block(Object({"n": 5}), ("openai-responses", "gpt-test")) == {
+            "role": "assistant", "content": '{"n": 5}'}
+
+    @staticmethod
+    def stub(model, content, status="completed"):
+        sent = {}
+        def create(**kwargs):
+            sent.update(kwargs)
+            return SimpleNamespace(output=[SimpleNamespace(type="message", content=content)], status=status)
+        model.client = SimpleNamespace(responses=SimpleNamespace(create=create))
+        return sent
+
+    def test_schema_renders_and_parses(self, model):
+        sent = self.stub(model, [SimpleNamespace(type="output_text", text='{"n": 5}')])
+        reply = model.query([UserMessage("u")], schema=SCHEMA)
+        assert sent["text"] == {"format": {"type": "json_schema", "name": "output", "schema": SCHEMA, "strict": True}}
+        assert reply.blocks == [Object({"n": 5})]
+
+    def test_no_schema_omits_text_format(self, model):
+        sent = self.stub(model, [SimpleNamespace(type="output_text", text="hi")])
+        assert model.query([UserMessage("u")]).text == "hi"
+        assert "text" not in sent
+
+    @pytest.mark.parametrize("content, status, message", [
+        ([SimpleNamespace(type="refusal", refusal="no")], "completed", "refused structured output: no"),
+        ([SimpleNamespace(type="output_text", text='{"n"')], "incomplete", "truncated"),
+        ([SimpleNamespace(type="output_text", text="oops")], "completed", "not valid JSON")])
+    def test_schema_failures_raise(self, model, content, status, message):
+        self.stub(model, content, status)
+        with pytest.raises(ValueError, match=message):
+            model.query([UserMessage("u")], schema=SCHEMA)

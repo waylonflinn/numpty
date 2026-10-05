@@ -8,7 +8,7 @@ Core: no dependencies. Provider adapters load their SDK on first use.
 from importlib import import_module
 
 from numpty.agent import Agent
-from numpty.messages import (AssistantMessage, Block, Message, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
+from numpty.messages import (AssistantMessage, Block, Message, Object, Reasoning, SystemMessage, Text, ToolCall, ToolResult,
                              ToolResultMessage, UserMessage)
 from numpty.models import Model
 from numpty.policy import Policy
@@ -28,7 +28,7 @@ def __getattr__(name):
 
 
 __all__ = [
-    "Agent", "AssistantMessage", "Block", "Message", "Model", "Policy", "PythonTool", "Reasoning", "ShellTool",
+    "Agent", "AssistantMessage", "Block", "Message", "Model", "Object", "Policy", "PythonTool", "Reasoning", "ShellTool",
     "SystemMessage", "Text", "Tool", "ToolCall", "ToolResult", "ToolResultMessage", "UserMessage",
     *_PROVIDERS,
 ]

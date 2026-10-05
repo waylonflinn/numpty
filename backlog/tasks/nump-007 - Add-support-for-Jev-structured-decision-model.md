@@ -4,10 +4,14 @@ title: Add support for Jev structured decision model
 status: To Do
 assignee: []
 created_date: '2026-09-24 17:34'
+updated_date: '2026-10-05 18:40'
 labels: []
-dependencies: []
+dependencies:
+  - NUMP-005
 references:
   - 'https://docs.typesafe.ai/introduction/quickstart'
+documentation:
+  - doc-004
 ordinal: 7000
 ---
 
@@ -24,6 +28,7 @@ Jev (TypeSafe, `typesafe-sdk`) is a structured decision model: likely an LLM tun
 - [ ] #3 `typesafe-sdk` is an optional extra listed in the README; importing numpty does not load it
 - [ ] #4 Tests run offline
 - [ ] #5 Public API is documented
+- [ ] #6 A chat model with structured output (NUMP-005) can answer the same Choice/Score/Noul question set, without probabilities or confidence; the question set compiles to the portable JSON Schema subset
 <!-- AC:END -->
 
 ## Definition of Done

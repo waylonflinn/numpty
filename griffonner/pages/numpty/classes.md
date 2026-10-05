@@ -25,6 +25,8 @@ output:
     griffe_target: "numpty.messages.ToolCall"
   - filename: "Reasoning.md"
     griffe_target: "numpty.messages.Reasoning"
+  - filename: "Object.md"
+    griffe_target: "numpty.messages.Object"
   - filename: "SystemMessage.md"
     griffe_target: "numpty.messages.SystemMessage"
   - filename: "UserMessage.md"
