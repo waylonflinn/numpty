@@ -4,15 +4,15 @@ title: Add an OS-level sandbox backend for policies
 status: To Do
 assignee: []
 created_date: '2026-09-25 22:08'
-updated_date: '2026-09-25 22:31'
+updated_date: '2026-10-06 15:27'
 labels: []
 dependencies:
   - NUMP-009
 references:
   - 'https://github.com/anthropic-experimental/sandbox-runtime'
 documentation:
-  - backlog/docs/doc-001 - Prior-art-limits-on-agent-run-code.md
-  - backlog/docs/doc-002 - fastaudit-notes.md
+  - 'doc-001 - Prior art: limits on agent-run code'
+  - doc-002 - fastaudit notes
 priority: low
 type: feature
 ordinal: 12000

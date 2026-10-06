@@ -4,14 +4,14 @@ title: Open upstream fastaudit issues for missing policy features
 status: To Do
 assignee: []
 created_date: '2026-09-25 22:07'
-updated_date: '2026-09-25 22:31'
+updated_date: '2026-10-06 15:27'
 labels: []
 dependencies: []
 references:
   - 'https://github.com/AnswerDotAI/fastaudit'
 documentation:
-  - backlog/docs/doc-001 - Prior-art-limits-on-agent-run-code.md
-  - backlog/docs/doc-002 - fastaudit-notes.md
+  - 'doc-001 - Prior art: limits on agent-run code'
+  - doc-002 - fastaudit notes
 type: chore
 ordinal: 10000
 ---

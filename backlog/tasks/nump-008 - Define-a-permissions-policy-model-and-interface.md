@@ -5,15 +5,15 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-24 21:31'
-updated_date: '2026-09-29 21:22'
+updated_date: '2026-10-06 15:27'
 labels: []
 dependencies: []
 references:
   - 'https://github.com/AnswerDotAI/fastaudit'
   - 'https://peps.python.org/pep-0578/'
 documentation:
-  - backlog/docs/doc-001 - Prior-art-limits-on-agent-run-code.md
-  - backlog/docs/doc-002 - fastaudit-notes.md
+  - 'doc-001 - Prior art: limits on agent-run code'
+  - doc-002 - fastaudit notes
 ordinal: 8000
 ---
 

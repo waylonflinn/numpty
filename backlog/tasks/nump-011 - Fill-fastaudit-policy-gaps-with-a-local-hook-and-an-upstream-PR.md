@@ -4,14 +4,14 @@ title: Fill fastaudit policy gaps with a local hook and an upstream PR
 status: To Do
 assignee: []
 created_date: '2026-09-25 22:08'
-updated_date: '2026-09-25 22:31'
+updated_date: '2026-10-06 15:27'
 labels: []
 dependencies:
   - NUMP-008
   - NUMP-010
 documentation:
-  - backlog/docs/doc-001 - Prior-art-limits-on-agent-run-code.md
-  - backlog/docs/doc-002 - fastaudit-notes.md
+  - 'doc-001 - Prior art: limits on agent-run code'
+  - doc-002 - fastaudit notes
 type: feature
 ordinal: 11000
 ---

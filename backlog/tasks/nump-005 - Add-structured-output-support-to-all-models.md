@@ -5,11 +5,11 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-24 17:13'
-updated_date: '2026-10-05 20:38'
+updated_date: '2026-10-06 15:27'
 labels: []
 dependencies: []
 documentation:
-  - doc-004
+  - doc-004 - Structured output across providers and Jev
 ordinal: 5000
 ---
 
