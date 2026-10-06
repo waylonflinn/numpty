@@ -9,6 +9,8 @@ output:
     griffe_target: "numpty.tools.PythonTool"
   - filename: "ShellTool.md"
     griffe_target: "numpty.tools.ShellTool"
+  - filename: "RunTool.md"
+    griffe_target: "numpty.run.RunTool"
   - filename: "Policy.md"
     griffe_target: "numpty.policy.Policy"
   - filename: "Model.md"

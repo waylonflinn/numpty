@@ -218,13 +218,75 @@ Limits:
   any file that the user can read, for example a credentials file.
 - New threads are denied unless the policy includes `Policy.Process.UNRESTRICTED`.
 - C extensions that fastaudit does not know are denied. For example, pyarrow is
-  denied, so `DataFrame.to_parquet` fails. `monitor_calls=False` lets them run
-  unchecked.
+  denied, so `DataFrame.to_parquet` fails. `Policy.Process.C_EXTENSIONS` lets them
+  run unchecked. Known extensions (numpy, pandas, PIL, matplotlib, and others) run
+  without it.
 - Only one policy can be active at a time. A nested agent with a different policy
   cannot run tools inside a tool call of the outer agent.
 - `ShellTool` needs `Policy.Process.UNRESTRICTED`. A new process is not checked, so a
   shell has full access. For a tool that can run shell commands, use `Policy.UNRESTRICTED`
   to make this clear.
+
+## Running code
+
+`numpty run` runs Python code from stdin in a new process under a policy. It passes
+through the stdout, stderr, and exit code of the code. A coding agent such as Claude Code
+or Codex can use it. A reviewer then approves a short command and a simple policy,
+not a long script.
+
+```bash
+echo 'import pandas as pd; pd.DataFrame({"x": [1]}).to_csv("out.csv")' | numpty run -p FS_WRITE_LOCATION
+```
+
+Options. Each option can occur only once. A second occurrence is an error (exit 2).
+
+- `-p NAMES`: comma-separated `Policy` names, for example `FS_WRITE_LOCATION,NET_UNRESTRICTED`.
+  All names from `Policy.names()` are accepted, and `UNRESTRICTED`. A permission that you do
+  not give gets its `Policy()` value: read files, no writes, no network, no processes.
+  Thus `-p FS_WRITE_LOCATION` alone is `FS_READ,FS_WRITE_LOCATION`.
+- `-l DIR`: current directory of the code. Default: the current directory.
+  `_LOCATION` scopes apply to it.
+- `-t SECONDS`: maximum run time. Default: 30.
+
+`RunTool` gives the same function to a numpty `Agent`. The code runs under the policy of
+the agent. An agent with no policy runs the code with no checks.
+
+```python
+from numpty import Agent, AnthropicMessages, Policy, RunTool
+
+agent = Agent(AnthropicMessages("claude-sonnet-5"), [RunTool()],
+              policy=Policy(Policy.Filesystem.READ | Policy.Filesystem.WRITE_LOCATION))
+```
+
+Exit codes:
+
+| Exit  | Meaning                                                 |
+|-------|---------------------------------------------------------|
+| 0     | The code finished.                                      |
+| 1     | The code raised. stderr shows the traceback.            |
+| 2     | `numpty run` only: usage error, for example a bad name. |
+| 124   | Timeout. The process and its child processes are killed.|
+| 126   | The policy denied an action. stderr shows the reason.   |
+| other | The exit code from the code, for example `sys.exit(3)`. |
+
+The policy is a guardrail, not a sandbox. The process uses the same interpreter and
+environment as numpty. All the limits in [Permissions](#permissions) apply. Also:
+
+- The code can itself exit 124, 126, or 2. This looks like a timeout, a denial, or a usage error.
+- Code that catches the denial (`except Exception`) can exit 0.
+- Each call is a new process. No state is kept between calls, and each call imports its packages again.
+- Some packages write a cache when they are first imported, for example matplotlib.
+  Under a policy with no writes, this import can fail.
+
+### Approval rules in Claude Code
+
+- End a rule with ` *` (a space, then a star), for example
+  `Bash(numpty run -p FS_WRITE_LOCATION -l . *)`.
+- Put each option that changes the policy in the rule: `-p`, and `-l` for a `_LOCATION`
+  scope. A command can add an option after the approved prefix. An option that is in the
+  rule cannot occur again, but an option that is not in the rule can be added.
+- "Always allow" probably saves `Bash(numpty run *)`. That rule allows every policy,
+  `UNRESTRICTED` included. To allow only one policy, write the rule yourself.
 
 ## Development
 

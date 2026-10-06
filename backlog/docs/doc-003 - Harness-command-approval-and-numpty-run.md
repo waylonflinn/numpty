@@ -3,7 +3,7 @@ id: doc-003
 title: Harness command approval and numpty run
 type: other
 created_date: '2026-10-01 20:20'
-updated_date: '2026-10-01 20:41'
+updated_date: '2026-10-06 22:22'
 ---
 # Harness command approval and `numpty run`
 
@@ -139,3 +139,22 @@ Open items:
 ## Direction (2026-10-01)
 
 The harness behavior is partly undocumented and changes between versions. Start with a best-effort CLI design. Test it in Claude Code and Codex, and change it based on the results.
+
+
+## Decision (2026-10-06)
+
+The CLI keeps the original design. The candidate design above (full policy required, no defaults) is not adopted.
+
+- No option is required. The defaults are `Policy()`: `FS_READ`, no write, no network, no process. The CLI and the tool have the same defaults.
+- Defaults are per dimension (filesystem read, append, write; network read, write; process). A dimension that no `-p` name sets takes the strictest policy enforceable today, which is `Policy()`'s value for it. Reads cannot be restricted now, so the read default is `FS_READ`; `-p FS_WRITE_LOCATION` alone is `FS_READ | FS_WRITE_LOCATION` and runs. When read restriction is implemented, the read default becomes none (or the strictest available) with no CLI change, and `-p FS_WRITE_LOCATION` then means no read. Leaving a flag out never errors. This keeps "no read" expressible without a new flag.
+- `-p/--permission` accepts every slot: `FS_*`, `NET_*`, `PROC_*` (with `PROC_C_EXTENSIONS`), and `UNRESTRICTED`. Network, process, and C extensions are CLI dimensions.
+- No repeat and no override. A second `-p`, `-l`, or `-t` is a usage error (exit 2).
+- `-l` without a `_LOCATION` scope in the policy writes a warning to stderr. The run continues.
+
+Reasons:
+
+- The intended use (a reviewer approves a short command with a visible policy) does not agree with how Claude Code and Codex save an approval. "Always allow" saves a prefix such as `Bash(numpty run *)`, which allows every policy.
+- The apparent fix is a default-allow style, where a rule names what is permitted and the command line is trusted. fastaudit and `Policy` are default-deny. The two styles contradict each other, and no design on paper shows which reconciliation works.
+- Hands-on experience decides. Implement, run `numpty run` through approvals in Claude Code and Codex, and revise the CLI from the results.
+
+Open items closed by this decision: the name for "no write" (not needed, defaults exist), the extra dimensions (accepted), `-l` without `_LOCATION` (warn), and `-t` (once). Items that remain for the hands-on round are listed in NUMP-009 under "Follow-up after implementation".

@@ -140,3 +140,27 @@ def test_policy_made_inside_active_policy_denied():
     with Policy().enforcement():
         with pytest.raises(PermissionError):
             Policy()
+
+
+def test_c_extensions_names_round_trip():
+    policy = Policy.from_names(["FS_READ", "PROC_C_EXTENSIONS"])
+    assert policy.process == PROC.C_EXTENSIONS
+    assert policy.names() == ["FS_READ", "PROC_C_EXTENSIONS"]
+
+
+@pytest.mark.parametrize("process, monitor_calls", [
+    (PROC(0), True), (PROC.C_EXTENSIONS, False), (PROC.UNRESTRICTED, False),
+    (PROC.UNRESTRICTED | PROC.C_EXTENSIONS, False),
+])
+def test_c_extensions_turns_off_monitor_calls(monkeypatch, process, monitor_calls):
+    import fastaudit
+    seen = {}
+    monkeypatch.setattr(fastaudit, "mk_audit", lambda *a, **kw: seen.update(kw))
+    Policy(process=process)
+    assert seen["monitor_calls"] is monitor_calls
+
+
+def test_c_extensions_alone_enforces_no_process_permission(dirs):
+    with Policy(process=PROC.C_EXTENSIONS).enforcement():
+        with pytest.raises(PermissionError):
+            subprocess.run(["true"])

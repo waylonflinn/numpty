@@ -1,7 +1,7 @@
 import pytest
 
-from numpty import (Agent, AssistantMessage, Model, Object, Policy, PythonTool, ShellTool, SystemMessage, Text, ToolCall,
-                    ToolResultMessage, UserMessage)
+from numpty import (Agent, AssistantMessage, Model, Object, Policy, PythonTool, RunTool, ShellTool, SystemMessage, Text,
+                    ToolCall, ToolResultMessage, UserMessage)
 from numpty.functions import write_file
 
 
@@ -154,3 +154,21 @@ def test_no_policy_checks_nothing(tmp_path, monkeypatch):
     agent = Agent(ScriptedModel(), [PythonTool(write_file), ShellTool()])
     assert agent.policy is None
     assert not agent.run(ToolCall("c1", "write_file", {"path": "a.txt", "content": "x"})).is_error
+
+
+def test_run_tool_with_restricted_policy_runs_in_its_process(tmp_path, monkeypatch):
+    pytest.importorskip("fastaudit")
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(ScriptedModel(), [RunTool()], policy=Policy())
+    result = agent.run(ToolCall("c1", "run", {"code": "print('hi'); open('a.txt', 'w')"}))
+    assert not result.is_error
+    assert result.content.startswith("hi\n\n[exit 126]\nPermissionError:")
+    assert not (tmp_path / "a.txt").exists()
+
+
+def test_run_tool_without_policy_is_unrestricted(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(ScriptedModel(), [RunTool()])
+    code = "import subprocess; open('a.txt', 'w'); subprocess.run(['true'], check=True); print('ok')"
+    assert agent.run(ToolCall("c1", "run", {"code": code})).content == "ok\n"
+    assert (tmp_path / "a.txt").exists()

@@ -191,21 +191,26 @@ class ShellTool(Tool):
         Returns:
             - Exit 0: stdout. stderr is dropped.
             - Nonzero exit: stdout, then `[exit <code>]` and stderr.
-            - Timeout: `[timed out after <timeout>s]`.
+            - Timeout: exit 124, stderr `[timed out after <timeout>s]`.
             - Output of `max_output` characters or more: truncated to `max_output`
               characters, with a truncation notice at the end.
         """
         try:
             p = subprocess.run(arguments["command"], shell=True, executable=self.shell, capture_output=True,
                                text=True, timeout=self.timeout)
-            out = p.stdout
-            if p.returncode != 0:
-                out += f"\n[exit {p.returncode}]\n{p.stderr}"
-        except subprocess.TimeoutExpired:
-            out = f"[timed out after {self.timeout}s]"
+        except subprocess.TimeoutExpired as e:
+            p = subprocess.CompletedProcess(e.cmd, 124, "", f"[timed out after {self.timeout}s]\n")
+        return _report(p, self.max_output)
 
-        if(len(out) < self.max_output):
-            return out
-        else:
-            truncation_warning = f"\n==========TRUNCATED===========\n(output beyond {self.max_output} characters has been truncated)"
-            return out[:(self.max_output-len(truncation_warning))] + truncation_warning
+
+def _report(p: subprocess.CompletedProcess, max_output: int) -> str:
+    """Tool output for a finished process. Format: see `ShellTool.run`."""
+    out = p.stdout
+    if p.returncode != 0:
+        out += f"\n[exit {p.returncode}]\n{p.stderr}"
+
+    if(len(out) < max_output):
+        return out
+    else:
+        truncation_warning = f"\n==========TRUNCATED===========\n(output beyond {max_output} characters has been truncated)"
+        return out[:(max_output-len(truncation_warning))] + truncation_warning

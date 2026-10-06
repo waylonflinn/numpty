@@ -13,6 +13,7 @@ from numpty.messages import (AssistantMessage, Block, Message, Object, Reasoning
                              ToolResultMessage, UserMessage)
 from numpty.models import Model
 from numpty.policy import Policy
+from numpty.run import RunTool
 from numpty.tools import PythonTool, ShellTool, Tool
 
 _PROVIDERS = {
@@ -30,7 +31,7 @@ def __getattr__(name):
 
 __all__ = [
     "Agent", "Answer", "AssistantMessage", "Block", "Choice", "DecisionModel", "DecisionTool", "Message", "Model", "Noul",
-    "Object", "Policy", "PythonTool", "Reasoning", "Score", "ShellTool", "SystemMessage", "Text", "Tool", "ToolCall",
+    "Object", "Policy", "PythonTool", "Reasoning", "RunTool", "Score", "ShellTool", "SystemMessage", "Text", "Tool", "ToolCall",
     "ToolResult", "ToolResultMessage", "TypeSafe", "UserMessage",
     *_PROVIDERS,
 ]

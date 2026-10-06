@@ -75,7 +75,8 @@ def test_shell_tool_reports_nonzero_exit():
 
 
 def test_shell_tool_timeout():
-    assert ShellTool(timeout=0.1).run({"command": "sleep 1"}) == "[timed out after 0.1s]"
+    out = ShellTool(timeout=0.1).run({"command": "sleep 1"})
+    assert "[exit 124]" in out and "[timed out after 0.1s]" in out
 
 
 def test_shell_tool_truncates_to_max_output():

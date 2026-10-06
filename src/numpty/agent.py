@@ -7,6 +7,7 @@ from numpty.decisions import Answer, DecisionModel, Question, schema as decision
 from numpty.messages import SystemMessage, ToolCall, ToolResult, ToolResultMessage, UserMessage
 from numpty.models import Model
 from numpty.policy import Policy
+from numpty.run import RunTool
 from numpty.tools import ShellTool, Tool
 
 
@@ -30,6 +31,7 @@ class Agent:
             tools: Tools the model can call. Same name: last one wins.
             system: System prompt.
             policy: Permissions for tool calls. Model queries are not checked. Default: `None`, no checks.
+                `RunTool` code runs under it in its own process.
 
         Raises:
             ValueError: A tool starts processes (`ShellTool`) and `policy` does not allow processes.
@@ -136,8 +138,13 @@ class Agent:
         try:
             tool = self.tools[tool_call.name]
 
-            with self.policy.enforcement() if self.policy else nullcontext():
-                result = str(tool.run(tool_call.arguments))
+            # NOTE: special case until tools declare the policy they need. The policy is enforced
+            # in the RunTool process, not here.
+            if isinstance(tool, RunTool):
+                result = tool.run(tool_call.arguments, policy=self.policy or Policy.UNRESTRICTED)
+            else:
+                with self.policy.enforcement() if self.policy else nullcontext():
+                    result = str(tool.run(tool_call.arguments))
             message = ToolResult(tool_call.id, result)
         except Exception as e:
             message = ToolResult(tool_call.id, f"{type(e).__name__}: {e}", is_error=True)

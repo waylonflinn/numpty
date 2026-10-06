@@ -27,7 +27,7 @@ class Policy:
     - Reads are not checked. Tool output that goes to the model can leak any file the user can read.
     - New threads are denied unless `Process.UNRESTRICTED` is set.
     - C extensions that fastaudit does not know are denied, for example pyarrow
-      (`DataFrame.to_parquet`). See `monitor_calls`.
+      (`DataFrame.to_parquet`). See `Process.C_EXTENSIONS`.
     - Only one policy can be active at a time. Entering a different policy inside an active
       one is denied.
 
@@ -35,7 +35,7 @@ class Policy:
 
     - `filesystem`: `READ`, `READ | WRITE_LOCATION`, `READ | WRITE`, `UNRESTRICTED`
     - `network`: none, `UNRESTRICTED`
-    - `process`: none, `UNRESTRICTED`
+    - `process`: none, `UNRESTRICTED`. `C_EXTENSIONS` can be added to either.
 
     Other combinations raise `ValueError`. They are never widened.
 
@@ -68,13 +68,19 @@ class Policy:
 
     class Process(Flag):
         """Process and thread permissions. The policy does not check a new process. Thus
-        `UNRESTRICTED` also gives that process full filesystem and network access."""
+        `UNRESTRICTED` also gives that process full filesystem and network access.
+
+        `C_EXTENSIONS` lets C extensions that fastaudit does not know run, for example pyarrow.
+        Their file and network access is not checked. Known extensions run without it:
+        numpy, pandas, PIL, matplotlib, orjson, pydantic-core, and others. `UNRESTRICTED`
+        includes `C_EXTENSIONS`."""
         UNRESTRICTED = auto()
+        C_EXTENSIONS = auto()
 
     UNRESTRICTED: "Policy"
 
     def __init__(self, filesystem: Filesystem = Filesystem.READ, network: Network = Network(0),
-                 process: Process = Process(0), monitor_calls: bool = True):
+                 process: Process = Process(0)):
         """Make a policy.
 
         Default: read files everywhere. No writes, no network, no processes, no threads.
@@ -85,8 +91,6 @@ class Policy:
             filesystem: Filesystem flags.
             network: Network flags.
             process: Process flags.
-            monitor_calls: Check calls into C extensions. `False` lets unknown C extensions
-                (for example pyarrow) run, but their file and network access is not checked.
 
         Raises:
             ValueError: fastaudit cannot enforce the combination of flags.
@@ -96,7 +100,6 @@ class Policy:
         self.filesystem = filesystem
         self.network = network
         self.process = process
-        self.monitor_calls = monitor_calls
         self._audit = None if self._unrestricted() else _fastaudit_enforcement(self)
 
     def _unrestricted(self):
@@ -121,13 +124,12 @@ class Policy:
         return [prefix + flag.name for prefix, flags in slots for flag in flags]
 
     @classmethod
-    def from_names(cls, names: list[str], monitor_calls: bool = True) -> "Policy":
+    def from_names(cls, names: list[str]) -> "Policy":
         """Make a policy from flag names. Opposite of `names`.
 
         Args:
             names: Flag names with a slot prefix, for example `"FS_READ"`. `"UNRESTRICTED"`
                 sets `UNRESTRICTED` in every slot.
-            monitor_calls: Check calls into C extensions.
 
         Returns:
             New policy. A slot with no names gets no flags.
@@ -146,7 +148,7 @@ class Policy:
                 slots[prefix] |= _PREFIXES[prefix][name.removeprefix(prefix)]
             except KeyError:
                 raise ValueError(f"unknown policy name {name!r}") from None
-        return cls(*slots.values(), monitor_calls=monitor_calls)
+        return cls(*slots.values())
 
     def __repr__(self):
         return f"Policy.from_names({self.names()!r})"
@@ -194,7 +196,8 @@ def _fastaudit_enforcement(policy):
         roots = _WRITE_ROOTS[write]
 
     allowed = ()
-    for flags, kind, events in ((policy.network, net, _NETWORK_EVENTS), (policy.process, proc, _PROCESS_EVENTS)):
+    process = policy.process & ~proc.C_EXTENSIONS   # not an event permission
+    for flags, kind, events in ((policy.network, net, _NETWORK_EVENTS), (process, proc, _PROCESS_EVENTS)):
         if kind.UNRESTRICTED in flags:
             allowed += events
         elif flags:
@@ -209,4 +212,5 @@ def _fastaudit_enforcement(policy):
     def before_deny(event, *_):
         return event.startswith(allowed)
 
-    return mk_audit(roots, before_deny=before_deny if allowed else None, monitor_calls=policy.monitor_calls)
+    monitor_calls = not policy.process & (proc.C_EXTENSIONS | proc.UNRESTRICTED)
+    return mk_audit(roots, before_deny=before_deny if allowed else None, monitor_calls=monitor_calls)
