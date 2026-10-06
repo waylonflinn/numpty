@@ -6,6 +6,13 @@ Simple (sort of) secure agency for your shallow semantic engine.
 
 A minimal, provider-neutral agent library with optional guardrails.
 
+## Features
+
+  - Anthropic and OpenAI models (both Chat and Responses APIs)
+  - Jev
+  - Local models, including Jev-style Decision Models in llama.cpp
+  - Good enough guardrail security (via fastaudit)
+
 ## Install
 
 The core has no dependencies, and without a provider it cannot call a model.
