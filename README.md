@@ -16,6 +16,7 @@ Install at least one extra:
 - `providers` — `anthropic` and `openai` together
 - `calc` — `simpleeval`, needed by the `calculate` function
 - `security` — `fastaudit`, needed by a restrictive `Policy`
+- `typesafe` — `typesafe-sdk`, needed by the `TypeSafe` decision model
 
 `all` installs every extra.
 
@@ -117,6 +118,71 @@ Limits:
   templates go further and reject the request with `failed to parse grammar`
   ([issue 27114](https://github.com/ggml-org/llama.cpp/issues/27114), closed as by design;
   Gemma 4 accepts it). Checked on build b11429. Use `schema` with an agent that has no tools.
+
+## Decisions
+
+A decision model answers typed questions about a state (text, or a JSON object or array).
+Each answer has a `value`, a `confidence` from 0 to 1, and the `probabilities` of each option.
+It does not chat or call tools.
+
+```python
+from numpty import Agent, Choice, Noul, Score, TypeSafe
+
+questions = {
+    "mood": Choice("Classify the mood.", {"angry": "Upset or hostile", "calm": None}),
+    "urgency": Score("How urgent?", ["Can wait", "This week", "Today"]),
+    "spam": Noul("Is it spam?", {"true": "Unsolicited advertising", "false": "A real message"}),
+}
+agent = Agent(TypeSafe("jev-latest"), [])
+agent.decide("The server is down and customers cannot log in. Fix it now!", questions)
+# {'mood': Answer(value='angry', confidence=..., probabilities={'angry': ..., 'calm': ...}),
+#  'urgency': Answer(value=1.8, confidence=..., probabilities={0: ..., 1: ..., 2: ...}), ...}
+```
+
+- `Choice`: one label. `value` is the label.
+- `Score`: ordered levels, lowest first. `value` is the expected level, a `float`.
+- `Noul`: yes or no. `value` is a `bool`.
+
+`TypeSafe` speaks the System One protocol (`POST /v1/systemone`) through `typesafe-sdk`.
+API key: `TYPESAFE_API_KEY`. The same class works with llama.cpp `llama-server` and a
+decision GGUF, for example `ggml-org/Clef-Flash-GGUF` or `ggml-org/lev-GGUF`:
+
+```python
+TypeSafe("clef-flash-9b-Q8", base_url="http://localhost:8080", api_key="none")
+```
+
+Option count, level count, and state length limits depend on the model. The server rejects
+a request that is out of limits. SDK exceptions are not wrapped.
+
+A chat model can answer the same questions. `decide` sends one query with the question set
+as a structured output schema, and no tools. The answers have labels only: `confidence` and
+`probabilities` are `None`, and a `Score` value is an `int`.
+
+```python
+from numpty import AnthropicMessages
+
+Agent(AnthropicMessages("claude-sonnet-5"), []).decide("...", questions)
+```
+
+`decisions.schema(questions)` gives that schema. It is in the portable subset (see
+Structured output).
+
+To let an agent ask a decision model, wrap a question set in a `DecisionTool`. The model
+calls it with `{"state": <text>}` and gets each answer as a `dict`.
+
+```python
+from numpty import DecisionTool
+
+triage = DecisionTool(TypeSafe("jev-latest"), questions, name="triage")
+agent = Agent(AnthropicMessages("claude-sonnet-5"), [triage])
+agent("Triage the newest message in support.txt.")
+```
+
+The default tool name is `decision-model-<question names>`. The default description lists
+the questions (`DecisionTool.describe`).
+
+A `DecisionTool` call is a tool call, so a `Policy` checks it (model queries are not checked).
+The decision model needs the network: a policy without `Policy.Network.UNRESTRICTED` denies it.
 
 ## Permissions
 

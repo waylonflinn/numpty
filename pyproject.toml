@@ -16,7 +16,8 @@ openai = ["openai"]
 providers = ["numpty[anthropic,openai]"]
 calc = ["simpleeval"]
 security = ["fastaudit>=0.2.10,<0.3"]
-all = ["numpty[providers,calc,security]"]
+typesafe = ["typesafe-sdk>=0.7.2"]
+all = ["numpty[providers,calc,security,typesafe]"]
 
 [dependency-groups]
 dev = [

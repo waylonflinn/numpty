@@ -21,9 +21,10 @@ SCHEMA = {"type": "object", "properties": {"n": {"type": "integer"}}, "required"
 
 
 def test_core_import_does_not_load_provider_sdks():
-    code = "import sys, numpty; print('openai' in sys.modules, 'anthropic' in sys.modules, 'simpleeval' in sys.modules)"
+    sdks = ["openai", "anthropic", "simpleeval", "typesafe_sdk"]
+    code = f"import sys, numpty; print(*(s in sys.modules for s in {sdks!r}))"
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout
-    assert out.split() == ["False", "False", "False"]
+    assert out.split() == ["False"] * len(sdks)
 
 
 def test_unknown_attribute():
