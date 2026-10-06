@@ -5,12 +5,11 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-05 21:00'
-updated_date: '2026-10-06 15:27'
+updated_date: '2026-10-06 22:46'
 labels:
   - research
 dependencies: []
 references:
-  - doc-004
   - 'https://docs.typesafe.ai/introduction/quickstart'
   - 'https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md'
   - 'https://benchmarkheaven.com/jev-models'
@@ -22,10 +21,13 @@ references:
   - 'https://huggingface.co/datasets/LocalLLaMA/typed-decisions'
   - 'https://github.com/allebee/jevk5'
   - 'https://github.com/Mapika/decider'
-  - decision-001
-  - doc-006
 documentation:
+  - doc-004 - Structured output across providers and Jev
   - doc-005 - Local decision models for llama.cpp (NUMP-016)
+  - 'doc-006 - Decision model watch: ggml-org GGUFs vs JevBench'
+  - >-
+    decision-001 - NUMP-007 targets the System One wire protocol; Clef-Flash and
+    lev first
 type: spike
 ordinal: 16000
 ---
