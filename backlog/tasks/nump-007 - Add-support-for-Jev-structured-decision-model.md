@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-24 17:34'
-updated_date: '2026-10-06 20:56'
+updated_date: '2026-10-06 21:26'
 labels: []
 dependencies:
   - NUMP-005
@@ -97,6 +97,8 @@ Revision (2026-10-06, approved in session): chat-path decide sends [SystemMessag
 <!-- SECTION:NOTES:BEGIN -->
 Validation: uv run pytest -q, 201 passed offline (tests/test_decisions.py: schema, Agent.decide both paths, DecisionTool, TypeSafe render/parse/decision with stubbed client; import test covers typesafe_sdk). Manual on saturn: TypeSafe lev-4b-Q8 returned Choice/Score/Noul with confidence and probabilities; OpenAIChat gemma-4-31b-Q4 decide returned angry/2/False after the system-message fix. API docs generate (griffonner pages added for 7 classes).
 Policy finding: DecisionTool under Policy() is denied (socket.connect blocked); works with Policy.Network.UNRESTRICTED. Documented in README and DecisionTool docstring. Exempting decision-model requests from the policy, as model queries are, is a policy design question, not done here.
+
+Jev check (2026-10-06, TYPESAFE_API_KEY from .env, jev-latest): Agent.decide over text and dict state and DecisionTool.run returned Choice/Score/Noul answers with confidence and probabilities. Outage text: angry 1.0, urgency 2.0, spam False 0.94. Spam text: spam True 0.92. Follow-up: NUMP-017 (Policy exemption for DecisionTool).
 <!-- SECTION:NOTES:END -->
 
 ## Comments
