@@ -1,15 +1,16 @@
 ---
 id: NUMP-010.01
 title: 'Open fastaudit issue: limit reads to given roots'
-status: Planning
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-06 22:53'
-updated_date: '2026-10-06 22:58'
+updated_date: '2026-10-08 20:00'
 labels: []
 dependencies: []
 references:
   - 'https://github.com/AnswerDotAI/fastaudit'
+  - 'https://github.com/AnswerDotAI/fastaudit/issues/28'
 documentation:
   - doc-002 - fastaudit notes
 parent_task_id: NUMP-010
@@ -25,14 +26,14 @@ fastaudit does not check reads: open in read mode, listdir, scandir, and glob ar
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A draft issue describes the problem, the numpty use case, and the proposed change (read roots, or read events delivered to before_deny)
-- [ ] #2 The user approves the draft before it is posted
-- [ ] #3 The issue URL and posting date are recorded in NUMP-011
+- [x] #1 A draft issue describes the problem, the numpty use case, and the proposed change (read roots, or read events delivered to before_deny)
+- [x] #2 The user approves the draft before it is posted
+- [x] #3 The issue URL and posting date are recorded in NUMP-011
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 issue is posted on the fastaudit repo
+- [x] #1 issue is posted on the fastaudit repo
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -91,6 +92,8 @@ Add `read_oks=None` to `mk_audit`. `None` keeps the current behavior. When it is
 A smaller change: route read events to `before_deny` only, with no root check. Hosts then write the policy. The `read_oks` form matches the existing API and is the check most hosts want, so I propose it first.
 
 I can open a PR for this.
+
+Posted by the user on 2026-10-08 as AnswerDotAI/fastaudit#28, 'Gate Reads in Addition to Writes': https://github.com/AnswerDotAI/fastaudit/issues/28. Open, no labels. Watch for maintainer response; NUMP-011 fallback starts if no acceptance by 2026-10-29 or on rejection.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -102,3 +105,9 @@ created: 2026-10-06 22:58
 Plan ready for review
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Issue posted by the user on 2026-10-08: https://github.com/AnswerDotAI/fastaudit/issues/28. Verified with gh issue view. URL and date recorded in NUMP-011 notes.
+<!-- SECTION:FINAL_SUMMARY:END -->

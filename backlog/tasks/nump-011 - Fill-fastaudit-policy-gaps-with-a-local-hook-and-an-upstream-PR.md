@@ -4,11 +4,13 @@ title: Fill fastaudit policy gaps with a local hook and an upstream PR
 status: To Do
 assignee: []
 created_date: '2026-09-25 22:08'
-updated_date: '2026-10-06 15:27'
+updated_date: '2026-10-08 20:00'
 labels: []
 dependencies:
   - NUMP-008
   - NUMP-010
+references:
+  - 'https://github.com/AnswerDotAI/fastaudit/issues/28'
 documentation:
   - 'doc-001 - Prior art: limits on agent-run code'
   - doc-002 - fastaudit notes
@@ -50,4 +52,6 @@ Open a PR upstream, built from this code, that closes the open issues. When upst
 
 <!-- SECTION:NOTES:BEGIN -->
 Two possible ways to close the gaps: (1) a second audit hook that only narrows, or (2) `mk_audit((), before_deny=cb)`, where the callback is the full write policy (probe confirmed per-directory write and append rules). Both need a map from each event to its paths. Reads never reach `before_deny`, so read checks need a hook in both cases. Choose at task time. See doc-002.
+
+Upstream issue for read roots posted 2026-10-08: https://github.com/AnswerDotAI/fastaudit/issues/28 (NUMP-010.01). 3-week window for maintainer acceptance ends 2026-10-29.
 <!-- SECTION:NOTES:END -->

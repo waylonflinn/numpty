@@ -4,7 +4,7 @@ title: Open upstream fastaudit issues for missing policy features
 status: To Do
 assignee: []
 created_date: '2026-09-25 22:07'
-updated_date: '2026-10-06 15:27'
+updated_date: '2026-10-08 20:00'
 labels: []
 dependencies: []
 references:
@@ -47,4 +47,6 @@ Each issue should describe the change that a later PR from us would make (see th
 
 <!-- SECTION:NOTES:BEGIN -->
 Candidate issue: per-root permission levels, or pass the operation kind and resolved paths to `before_deny`. Either makes fine-grained policy an intended use and removes the need for numpty to map events to paths. See doc-002.
+
+Read-roots gap: issue posted 2026-10-08, https://github.com/AnswerDotAI/fastaudit/issues/28 (NUMP-010.01, Done). Current-directory-only and append-mode gaps still need issues.
 <!-- SECTION:NOTES:END -->
