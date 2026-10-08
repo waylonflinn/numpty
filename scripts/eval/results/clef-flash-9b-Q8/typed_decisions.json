@@ -1,0 +1,220 @@
+{
+ "model": "clef-flash-9b-Q8",
+ "run": {
+  "date": "2026-10-08",
+  "base_url": "https://saturn.wayforwardlabs.com",
+  "dataset_revision": "d0e2f0c42fef86cc15d1688d25a19f5ba7c85b18",
+  "scorer": "scripts/eval/td_score.py"
+ },
+ "cases": 400,
+ "decisions": 2000,
+ "cold_s": 0.47,
+ "warm_p50_s": 0.335,
+ "warm_max_s": 0.924,
+ "tokens_mean": 868,
+ "tokens_max": 1195,
+ "all": {
+  "n": 2000,
+  "acc": 0.707,
+  "kl": 0.209,
+  "brier": 0.11,
+  "pmax": 0.703,
+  "ece": 0.01
+ },
+ "uniform_baseline": {
+  "n": 2000,
+  "acc": 0.269,
+  "kl": 0.444,
+  "brier": 0.238,
+  "pmax": 0.318,
+  "ece": 0.049
+ },
+ "by_type": {
+  "noul": {
+   "n": 600,
+   "acc": 0.818,
+   "kl": 0.116,
+   "brier": 0.079,
+   "pmax": 0.82,
+   "ece": 0.009
+  },
+  "choice": {
+   "n": 600,
+   "acc": 0.71,
+   "kl": 0.295,
+   "brier": 0.141,
+   "pmax": 0.705,
+   "ece": 0.031
+  },
+  "score": {
+   "n": 800,
+   "acc": 0.62,
+   "kl": 0.214,
+   "brier": 0.11,
+   "pmax": 0.613,
+   "ece": 0.039
+  }
+ },
+ "per_question": {
+  "agent_trace_observability/action": {
+   "n": 100,
+   "acc": 0.67,
+   "kl": 0.13,
+   "brier": 0.069,
+   "pmax": 0.521,
+   "ece": 0.156
+  },
+  "agent_trace_observability/needs_review": {
+   "n": 100,
+   "acc": 0.81,
+   "kl": 0.075,
+   "brier": 0.059,
+   "pmax": 0.741,
+   "ece": 0.075
+  },
+  "agent_trace_observability/outcome": {
+   "n": 100,
+   "acc": 0.73,
+   "kl": 0.267,
+   "brier": 0.129,
+   "pmax": 0.656,
+   "ece": 0.106
+  },
+  "agent_trace_observability/risk": {
+   "n": 100,
+   "acc": 0.48,
+   "kl": 0.171,
+   "brier": 0.109,
+   "pmax": 0.541,
+   "ece": 0.128
+  },
+  "agent_trace_observability/urgency": {
+   "n": 100,
+   "acc": 0.39,
+   "kl": 0.351,
+   "brier": 0.187,
+   "pmax": 0.574,
+   "ece": 0.184
+  },
+  "customer_service/action": {
+   "n": 100,
+   "acc": 0.55,
+   "kl": 0.492,
+   "brier": 0.24,
+   "pmax": 0.724,
+   "ece": 0.174
+  },
+  "customer_service/category": {
+   "n": 100,
+   "acc": 0.89,
+   "kl": 0.17,
+   "brier": 0.08,
+   "pmax": 0.86,
+   "ece": 0.052
+  },
+  "customer_service/churn_risk": {
+   "n": 100,
+   "acc": 0.73,
+   "kl": 0.219,
+   "brier": 0.108,
+   "pmax": 0.675,
+   "ece": 0.117
+  },
+  "customer_service/needs_human": {
+   "n": 100,
+   "acc": 0.84,
+   "kl": 0.112,
+   "brier": 0.084,
+   "pmax": 0.778,
+   "ece": 0.114
+  },
+  "customer_service/urgency": {
+   "n": 100,
+   "acc": 0.81,
+   "kl": 0.147,
+   "brier": 0.065,
+   "pmax": 0.694,
+   "ece": 0.131
+  },
+  "invoice_processing/discrepancy_severity": {
+   "n": 100,
+   "acc": 0.73,
+   "kl": 0.327,
+   "brier": 0.16,
+   "pmax": 0.764,
+   "ece": 0.142
+  },
+  "invoice_processing/disposition": {
+   "n": 100,
+   "acc": 0.63,
+   "kl": 0.387,
+   "brier": 0.176,
+   "pmax": 0.707,
+   "ece": 0.115
+  },
+  "invoice_processing/duplicate": {
+   "n": 100,
+   "acc": 0.89,
+   "kl": 0.137,
+   "brier": 0.071,
+   "pmax": 0.972,
+   "ece": 0.082
+  },
+  "invoice_processing/matches_order": {
+   "n": 100,
+   "acc": 0.96,
+   "kl": 0.114,
+   "brier": 0.052,
+   "pmax": 0.933,
+   "ece": 0.027
+  },
+  "invoice_processing/urgency": {
+   "n": 100,
+   "acc": 0.55,
+   "kl": 0.196,
+   "brier": 0.108,
+   "pmax": 0.55,
+   "ece": 0.117
+  },
+  "security_incidents/credential_compromise": {
+   "n": 100,
+   "acc": 0.6,
+   "kl": 0.182,
+   "brier": 0.149,
+   "pmax": 0.743,
+   "ece": 0.144
+  },
+  "security_incidents/disposition": {
+   "n": 100,
+   "acc": 0.79,
+   "kl": 0.327,
+   "brier": 0.151,
+   "pmax": 0.763,
+   "ece": 0.081
+  },
+  "security_incidents/severity": {
+   "n": 100,
+   "acc": 0.67,
+   "kl": 0.138,
+   "brier": 0.057,
+   "pmax": 0.519,
+   "ece": 0.179
+  },
+  "security_incidents/true_positive": {
+   "n": 100,
+   "acc": 0.81,
+   "kl": 0.074,
+   "brier": 0.057,
+   "pmax": 0.752,
+   "ece": 0.09
+  },
+  "security_incidents/urgency": {
+   "n": 100,
+   "acc": 0.6,
+   "kl": 0.16,
+   "brier": 0.09,
+   "pmax": 0.586,
+   "ece": 0.098
+  }
+ }
+}

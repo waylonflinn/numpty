@@ -1,0 +1,220 @@
+{
+ "model": "lev-4b-Q8",
+ "run": {
+  "date": "2026-10-08",
+  "base_url": "https://saturn.wayforwardlabs.com",
+  "dataset_revision": "d0e2f0c42fef86cc15d1688d25a19f5ba7c85b18",
+  "scorer": "scripts/eval/td_score.py"
+ },
+ "cases": 400,
+ "decisions": 2000,
+ "cold_s": 2.29,
+ "warm_p50_s": 0.584,
+ "warm_max_s": 1.127,
+ "tokens_mean": 2464,
+ "tokens_max": 4740,
+ "all": {
+  "n": 2000,
+  "acc": 0.637,
+  "kl": 0.297,
+  "brier": 0.165,
+  "pmax": 0.639,
+  "ece": 0.043
+ },
+ "uniform_baseline": {
+  "n": 2000,
+  "acc": 0.269,
+  "kl": 0.444,
+  "brier": 0.238,
+  "pmax": 0.318,
+  "ece": 0.049
+ },
+ "by_type": {
+  "noul": {
+   "n": 600,
+   "acc": 0.757,
+   "kl": 0.292,
+   "brier": 0.202,
+   "pmax": 0.813,
+   "ece": 0.101
+  },
+  "choice": {
+   "n": 600,
+   "acc": 0.617,
+   "kl": 0.346,
+   "brier": 0.171,
+   "pmax": 0.647,
+   "ece": 0.038
+  },
+  "score": {
+   "n": 800,
+   "acc": 0.562,
+   "kl": 0.264,
+   "brier": 0.132,
+   "pmax": 0.503,
+   "ece": 0.059
+  }
+ },
+ "per_question": {
+  "agent_trace_observability/action": {
+   "n": 100,
+   "acc": 0.52,
+   "kl": 0.251,
+   "brier": 0.145,
+   "pmax": 0.609,
+   "ece": 0.127
+  },
+  "agent_trace_observability/needs_review": {
+   "n": 100,
+   "acc": 0.76,
+   "kl": 0.154,
+   "brier": 0.117,
+   "pmax": 0.834,
+   "ece": 0.085
+  },
+  "agent_trace_observability/outcome": {
+   "n": 100,
+   "acc": 0.67,
+   "kl": 0.296,
+   "brier": 0.14,
+   "pmax": 0.651,
+   "ece": 0.069
+  },
+  "agent_trace_observability/risk": {
+   "n": 100,
+   "acc": 0.39,
+   "kl": 0.288,
+   "brier": 0.162,
+   "pmax": 0.543,
+   "ece": 0.153
+  },
+  "agent_trace_observability/urgency": {
+   "n": 100,
+   "acc": 0.36,
+   "kl": 0.343,
+   "brier": 0.155,
+   "pmax": 0.282,
+   "ece": 0.126
+  },
+  "customer_service/action": {
+   "n": 100,
+   "acc": 0.54,
+   "kl": 0.422,
+   "brier": 0.193,
+   "pmax": 0.564,
+   "ece": 0.048
+  },
+  "customer_service/category": {
+   "n": 100,
+   "acc": 0.82,
+   "kl": 0.296,
+   "brier": 0.138,
+   "pmax": 0.785,
+   "ece": 0.067
+  },
+  "customer_service/churn_risk": {
+   "n": 100,
+   "acc": 0.63,
+   "kl": 0.24,
+   "brier": 0.119,
+   "pmax": 0.479,
+   "ece": 0.181
+  },
+  "customer_service/needs_human": {
+   "n": 100,
+   "acc": 0.74,
+   "kl": 0.198,
+   "brier": 0.147,
+   "pmax": 0.812,
+   "ece": 0.083
+  },
+  "customer_service/urgency": {
+   "n": 100,
+   "acc": 0.68,
+   "kl": 0.188,
+   "brier": 0.093,
+   "pmax": 0.577,
+   "ece": 0.108
+  },
+  "invoice_processing/discrepancy_severity": {
+   "n": 100,
+   "acc": 0.52,
+   "kl": 0.536,
+   "brier": 0.265,
+   "pmax": 0.548,
+   "ece": 0.226
+  },
+  "invoice_processing/disposition": {
+   "n": 100,
+   "acc": 0.54,
+   "kl": 0.553,
+   "brier": 0.266,
+   "pmax": 0.629,
+   "ece": 0.112
+  },
+  "invoice_processing/duplicate": {
+   "n": 100,
+   "acc": 0.89,
+   "kl": 0.289,
+   "brier": 0.193,
+   "pmax": 0.645,
+   "ece": 0.245
+  },
+  "invoice_processing/matches_order": {
+   "n": 100,
+   "acc": 0.68,
+   "kl": 0.523,
+   "brier": 0.379,
+   "pmax": 0.876,
+   "ece": 0.201
+  },
+  "invoice_processing/urgency": {
+   "n": 100,
+   "acc": 0.63,
+   "kl": 0.225,
+   "brier": 0.126,
+   "pmax": 0.58,
+   "ece": 0.125
+  },
+  "security_incidents/credential_compromise": {
+   "n": 100,
+   "acc": 0.66,
+   "kl": 0.312,
+   "brier": 0.211,
+   "pmax": 0.833,
+   "ece": 0.187
+  },
+  "security_incidents/disposition": {
+   "n": 100,
+   "acc": 0.61,
+   "kl": 0.259,
+   "brier": 0.145,
+   "pmax": 0.645,
+   "ece": 0.054
+  },
+  "security_incidents/severity": {
+   "n": 100,
+   "acc": 0.62,
+   "kl": 0.15,
+   "brier": 0.067,
+   "pmax": 0.496,
+   "ece": 0.133
+  },
+  "security_incidents/true_positive": {
+   "n": 100,
+   "acc": 0.81,
+   "kl": 0.273,
+   "brier": 0.165,
+   "pmax": 0.875,
+   "ece": 0.101
+  },
+  "security_incidents/urgency": {
+   "n": 100,
+   "acc": 0.67,
+   "kl": 0.14,
+   "brier": 0.066,
+   "pmax": 0.52,
+   "ece": 0.15
+  }
+ }
+}

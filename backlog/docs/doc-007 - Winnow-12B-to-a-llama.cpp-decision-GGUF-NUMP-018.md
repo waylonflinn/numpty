@@ -3,13 +3,15 @@ id: doc-007
 title: Winnow-12B to a llama.cpp decision GGUF (NUMP-018)
 type: specification
 created_date: '2026-10-07 19:37'
-updated_date: '2026-10-08 13:26'
+updated_date: '2026-10-08 19:26'
 tags:
   - research
   - decision-models
   - nump-018
 ---
 Research spike NUMP-018, 2026-10-07. Question: can a Jev-style model that ships without llama.cpp decision metadata be served by upstream llama-server's `POST /v1/systemone`, and how. Winnow-12B first, then a recipe for the next model. Decision: decision-002.
+
+Evaluation scripts, protocol and stored results: doc-008 - Decision model evaluation protocol (`scripts/eval/`).
 
 ## Summary
 

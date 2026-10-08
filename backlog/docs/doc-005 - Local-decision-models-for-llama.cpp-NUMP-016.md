@@ -3,12 +3,14 @@ id: doc-005
 title: Local decision models for llama.cpp (NUMP-016)
 type: other
 created_date: '2026-10-05 21:41'
-updated_date: '2026-10-06 15:05'
+updated_date: '2026-10-08 19:26'
 tags:
   - research
   - decision-models
 ---
 # Local decision models for llama.cpp (NUMP-016)
+
+Evaluation scripts, protocol and stored results: doc-008 - Decision model evaluation protocol (`scripts/eval/`).
 
 Research for NUMP-016, in preparation for NUMP-007 (Jev support). Facts verified on 2026-10-05 and 2026-10-06 unless marked "claimed". Probe scripts live in the session scratch directory and are not committed. The recurrent cross-reference with the JevBench board and the RTX 3090 fit table is doc-006; this doc does not repeat those tables. The decision this research feeds is decision-001.
 
