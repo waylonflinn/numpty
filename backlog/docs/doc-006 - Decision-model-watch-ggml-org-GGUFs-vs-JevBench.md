@@ -3,7 +3,7 @@ id: doc-006
 title: 'Decision model watch: ggml-org GGUFs vs JevBench'
 type: other
 created_date: '2026-10-05 23:14'
-updated_date: '2026-10-06 00:17'
+updated_date: '2026-10-07 20:03'
 tags:
   - research
   - recurrent
@@ -169,3 +169,7 @@ Recommendation per model (adopt = install on saturn now, try = install when a sl
 | [`Bespoke-Nimble-9B-v3-GGUF`](https://huggingface.co/ggml-org/Bespoke-Nimble-9B-v3-GGUF) | **skip** | CC-BY-NC-4.0, Calibration 69.9, below lev on Capability despite twice the size |
 
 Watch item for the next run: an upstream-compatible Gemma 4 12B GGUF (Winnow with decision metadata, or a ggml-org conversion of torchcast, Cygnet, or Jev-Omni) would outrank every collection model that fits the 3090 by about 10 Capability points and should become the adopt candidate.
+
+#### Update 2026-10-07 (NUMP-018)
+
+The watch item above is resolved for Winnow. doc-007 converts the published `EldanRing/Winnow-12B` Q8_0 GGUF to an upstream decision model by metadata only (type `nimble`, a `systemone` template, temperature keys) and verifies it on JevBench public: 198/231, the author's figure. On the same items Clef-Flash scores 190 and lev 170. decision-002 makes Winnow the recommended local text decision model, Clef-Flash stays for images. Saturn preset `winnow-12b-Q8`, 13.1 GB VRAM at 8k. The next run can drop Winnow from the watch list and look at Cygnet (a frozen Gemma-4-12B-it, metadata only, doc-007) and at any `nimble` or `openjev` shaped model that outranks Winnow with an Apache or MIT license.
