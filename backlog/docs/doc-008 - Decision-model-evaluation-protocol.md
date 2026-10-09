@@ -3,7 +3,7 @@ id: doc-008
 title: Decision model evaluation protocol
 type: specification
 created_date: '2026-10-08 19:26'
-updated_date: '2026-10-08 19:50'
+updated_date: '2026-10-08 23:23'
 ---
 # Decision model evaluation protocol
 
@@ -74,10 +74,11 @@ The result file has these aggregates for `all`, `uniform_baseline`, each questio
 - Router: systemd unit `llama-server.service`, `/opt/llama/bin/llama-server --host 127.0.0.1 --port 4341 --sleep-idle-seconds 900 --cache-idle-slots --kv-unified --models-preset /opt/llama/config/models.ini --models-max 1 --models-autoload --tools all`. Build b11429 (llama.cpp main 2026-10-05).
 - One model is in memory at a time. A request for another model unloads the current one. The server answers one request at a time, so all requests are sequential and the scripts do not retry.
 - `models.ini` `[*]` defaults: `flash-attn = true`, `n-gpu-layers = 99`, `cache-type-k = q8_0`, `cache-type-v = q8_0`, `temp = 0.2`, `parallel = 1`, `load-mode = mlock`.
-- Decision presets, all Q8_0 weights and `jinja = true`:
+- Decision presets, Q8_0 weights except Quyet, all `jinja = true`:
   - `lev-4b-Q8`: `/opt/llama/models/lev-Q8_0.gguf`, `ctx-size = 32768`.
   - `clef-flash-9b-Q8`: `/opt/llama/models/Clef-Flash-Q8_0.gguf`, `mmproj = /opt/llama/models/mmproj-Clef-Flash-BF16.gguf`, `ctx-size`, `batch-size` and `ubatch-size` 16384.
   - `winnow-12b-Q8`: `/opt/llama/models/Winnow-12B-Q8_0-systemone.gguf` (converted per doc-007), `ctx-size = 8192`.
+  - `quyet-large-Q4`: `/opt/llama/models/Quyet-1.0-Large.Q4_K_M-systemone.gguf` (Q4_K_M, converted per doc-009), `mmproj = /opt/llama/models/Quyet-1.0-Large.mmproj-f16.gguf`, `ctx-size = 32768`.
 - Hardware: one RTX 3090, 24 GB.
 - jevbench runs at price 0 (`--price-in-per-m 0 --price-out-per-m 0`), so `charged_usd` is 0. Without these flags jevbench uses its default prices and reports a cost that was not paid.
 
@@ -101,29 +102,30 @@ Stored results, measured 2026-10-08 through the router from the Mac. They equal 
 
 | model | JevBench correct / 231 | JevBench Brier | JevBench ECE | ordinal MAE | td accuracy | td KL | td Brier | td mean pmax | td ECE | td warm p50 | td mean input tokens | samples t1 / t5 (median) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| quyet-large-Q4 (Q4_K_M, measured 2026-10-08, NUMP-022) | 208 | 0.139 | 0.043 | 0.171 | 0.804 | 0.270 | 0.111 | 0.797 | 0.021 | 1.57 s | 1479 | 0.24 to 0.42 s / 0.93 to 1.82 s |
 | winnow-12b-Q8 | 198 | 0.205 | 0.067 | 0.189 | 0.702 | 0.629 | 0.238 | 0.858 | 0.156 | 0.79 s | 1721 | 0.28 s / 0.82 s |
 | clef-flash-9b-Q8 | 190 | 0.235 | 0.058 | 0.243 | 0.707 | 0.209 | 0.110 | 0.703 | 0.010 | 0.34 s | 868 | 0.19 s / 0.30 s |
 | lev-4b-Q8 | 170 | 0.397 | 0.119 | 0.420 | 0.637 | 0.297 | 0.165 | 0.639 | 0.043 | 0.58 s | 2464 | 0.25 s / 0.55 s |
 | uniform (td only) | | | | | 0.269 | 0.444 | 0.238 | 0.318 | | | | |
 
-"td" is typed-decisions. The td ECE column is new in NUMP-021. Winnow is sharp and overconfident on the teacher labels (pmax 0.858 for accuracy 0.702). Clef-Flash is close to calibrated.
+"td" is typed-decisions. The td ECE column is new in NUMP-021. The Quyet row is Q4_K_M weights (doc-009), the others Q8_0. Winnow is sharp and overconfident on the teacher labels (pmax 0.858 for accuracy 0.702). Clef-Flash is close to calibrated.
 
 ## What is not in the repo
 
 These items are on saturn only.
 
 - The router configuration: `/opt/llama/config/models.ini` with the decision presets above, and its backups `models.ini.bak-2026-10-06` and `.bak-2026-10-07`. To recreate a preset, copy the lines in "Saturn settings" into `models.ini`, then send `GET /v1/models?reload=1`.
-- The GGUF files in `/opt/llama/models/`. lev and Clef-Flash come from `ggml-org`. To recreate the Winnow file, follow the conversion in doc-007.
-- The conversion tools in `~/Build`: `llama.cpp` (source of the `/opt/llama` binaries), `venv-gguf`, `gguf_add_decision.py`, `winnow_systemone.jinja`, `fork_prompt.py`. NUMP-022 uses them.
+- The GGUF files in `/opt/llama/models/`. lev and Clef-Flash come from `ggml-org`. To recreate the Winnow file, follow the conversion in doc-007. To recreate the Quyet file, follow doc-009 (the mradermacher Q4_K_M and mmproj plus the template in the doc).
+- The conversion tools on saturn, tidied into `~/Build/numpty-eval/` on 2026-10-08 (NUMP-025 step 0): `convert/` (`gguf_add_decision.py`, `fork_prompt.py`, `winnow_systemone.jinja`, `quyet_systemone.jinja`, `models-ini-preset.txt`, `convert_and_start.sh`, `convert.log`), `probes/nump-022/` (the NUMP-022 probe scripts, request and answer JSON, `server8099*.log`), `venv/` (numpy, tqdm, pyyaml, pillow; use it with `PYTHONPATH=~/Build/llama.cpp/gguf-py`), `imagejev-preview/` (the NUMP-025 rebuilt set and runs). `~/Build/llama.cpp` stays where it is: it is the source of the `/opt/llama` binaries, not an evaluation artefact. Backup `models.ini.bak-2026-10-08`.
 
 Removed from saturn after NUMP-021, because the repo holds or can recreate them:
 
 - `~/Build/jevbench`. `jevbench.py` clones the pinned commit on demand.
-- `~/Build/results/jevbench-{8099,clef-flash-9b-Q8,lev-4b-Q8}/` and `~/Build/server8099.log`. The summaries are in `scripts/eval/results/`.
+- `~/Build/results/jevbench-{8099,clef-flash-9b-Q8,lev-4b-Q8}/`, if still present, and `~/Build/numpty-eval/probes/nump-022/server8099.log`. The summaries are in `scripts/eval/results/`.
 - `~/Build/start8099.sh`, the manual verbose server for one GGUF. To recreate it, run this command on saturn. Stop it with `pkill -f "[p]ort 8099"`. Do not use `pkill llama-server`, because that stops the router.
 
 ```bash
-nohup /opt/llama/bin/llama-server -m /opt/llama/models/Winnow-12B-Q8_0-systemone.gguf --host 127.0.0.1 --port 8099 -ngl 99 -fa on -c 8192 -ctk q8_0 -ctv q8_0 --parallel 1 --jinja --verbose --alias winnow-12b-Q8 > ~/Build/server8099.log 2>&1 &
+nohup /opt/llama/bin/llama-server -m /opt/llama/models/Winnow-12B-Q8_0-systemone.gguf --host 127.0.0.1 --port 8099 -ngl 99 -fa on -c 8192 -ctk q8_0 -ctv q8_0 --parallel 1 --jinja --verbose --alias winnow-12b-Q8 > ~/Build/numpty-eval/probes/nump-022/server8099.log 2>&1 &
 ```
 
 With `--verbose`, the server logs the rendered prompt of each task. To evaluate through it, run the commands on saturn with `--base-url http://127.0.0.1:8099`.
