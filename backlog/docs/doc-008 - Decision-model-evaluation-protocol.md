@@ -3,7 +3,7 @@ id: doc-008
 title: Decision model evaluation protocol
 type: specification
 created_date: '2026-10-08 19:26'
-updated_date: '2026-10-08 23:23'
+updated_date: '2026-10-09 15:37'
 ---
 # Decision model evaluation protocol
 
@@ -79,6 +79,7 @@ The result file has these aggregates for `all`, `uniform_baseline`, each questio
   - `clef-flash-9b-Q8`: `/opt/llama/models/Clef-Flash-Q8_0.gguf`, `mmproj = /opt/llama/models/mmproj-Clef-Flash-BF16.gguf`, `ctx-size`, `batch-size` and `ubatch-size` 16384.
   - `winnow-12b-Q8`: `/opt/llama/models/Winnow-12B-Q8_0-systemone.gguf` (converted per doc-007), `ctx-size = 8192`.
   - `quyet-large-Q4`: `/opt/llama/models/Quyet-1.0-Large.Q4_K_M-systemone.gguf` (Q4_K_M, converted per doc-009), `mmproj = /opt/llama/models/Quyet-1.0-Large.mmproj-f16.gguf`, `ctx-size = 32768`.
+  - `gemma-4-31b-Q4-systemone`: `/opt/llama/models/gemma-4-31B-it-qat-UD-Q4_K_XL-systemone.gguf` (the chat preset's file plus the Quyet keys, doc-011), the `gemma-4-31b-Q4` lines (128k, q4_0 KV, MTP draft) plus `jinja = true`. `gemma-4-31b-Q4-systemone-32k`: the same file, `ctx-size = 32768`, `jinja = true`. Backup `models.ini.bak-2026-10-09`.
 - Hardware: one RTX 3090, 24 GB.
 - jevbench runs at price 0 (`--price-in-per-m 0 --price-out-per-m 0`), so `charged_usd` is 0. Without these flags jevbench uses its default prices and reports a cost that was not paid.
 
@@ -103,12 +104,14 @@ Stored results, measured 2026-10-08 through the router from the Mac. They equal 
 | model | JevBench correct / 231 | JevBench Brier | JevBench ECE | ordinal MAE | td accuracy | td KL | td Brier | td mean pmax | td ECE | td warm p50 | td mean input tokens | samples t1 / t5 (median) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | quyet-large-Q4 (Q4_K_M, measured 2026-10-08, NUMP-022) | 208 | 0.139 | 0.043 | 0.171 | 0.804 | 0.270 | 0.111 | 0.797 | 0.021 | 1.57 s | 1479 | 0.24 to 0.42 s / 0.93 to 1.82 s |
+| gemma-4-31b-Q4-systemone (NUMP-026 test B: the chat preset's QAT Q4_K_XL file plus the Quyet openjev keys, no LoRA, chat preset settings; measured 2026-10-09, reference only) | 179 | 0.301 | 0.045 | 0.195 | 0.674 | 0.455 | 0.173 | 0.711 | 0.046 | 1.43 s | 1479 | 0.24 to 0.41 s / 0.82 to 1.66 s |
+| gemma-4-31b-Q4-systemone-32k (same file, Quyet settings: 32k, q8_0 KV, no draft; JevBench only) | 180 | 0.294 | 0.047 | 0.200 | | | | | | | | |
 | winnow-12b-Q8 | 198 | 0.205 | 0.067 | 0.189 | 0.702 | 0.629 | 0.238 | 0.858 | 0.156 | 0.79 s | 1721 | 0.28 s / 0.82 s |
 | clef-flash-9b-Q8 | 190 | 0.235 | 0.058 | 0.243 | 0.707 | 0.209 | 0.110 | 0.703 | 0.010 | 0.34 s | 868 | 0.19 s / 0.30 s |
 | lev-4b-Q8 | 170 | 0.397 | 0.119 | 0.420 | 0.637 | 0.297 | 0.165 | 0.639 | 0.043 | 0.58 s | 2464 | 0.25 s / 0.55 s |
 | uniform (td only) | | | | | 0.269 | 0.444 | 0.238 | 0.318 | | | | |
 
-"td" is typed-decisions. The td ECE column is new in NUMP-021. The Quyet row is Q4_K_M weights (doc-009), the others Q8_0. Winnow is sharp and overconfident on the teacher labels (pmax 0.858 for accuracy 0.702). Clef-Flash is close to calibrated.
+"td" is typed-decisions. The two gemma-4-31b-Q4-systemone rows are the stock chat model with decision metadata (doc-011); they measure what the Quyet LoRA adds and are not recommended presets. The td ECE column is new in NUMP-021. The Quyet row is Q4_K_M weights (doc-009), the others Q8_0. Winnow is sharp and overconfident on the teacher labels (pmax 0.858 for accuracy 0.702). Clef-Flash is close to calibrated.
 
 ## What is not in the repo
 
