@@ -3,11 +3,11 @@ id: NUMP-022
 title: >-
   Research spike: convert Quyet-1.0-Large to a llama.cpp decision-model GGUF
   (type openjev)
-status: Planning
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-08 14:47'
-updated_date: '2026-10-08 19:26'
+updated_date: '2026-10-08 20:49'
 labels:
   - research
   - decision-models
@@ -19,6 +19,12 @@ references:
   - 'https://github.com/ncchinh/quyet'
   - 'https://benchmarkheaven.com/jev-models'
 documentation:
+  - doc-009 - Quyet-1.0-Large to a llama.cpp decision GGUF (NUMP-022)
+  - decision-003 - Quyet-1.0-Large (type openjev
+  - Q4_K_M
+  - >-
+    32k) replaces Winnow for text accuracy and Clef-Flash for images and
+    calibration; Clef-Flash stays for throughput and small VRAM
   - doc-008 - Decision model evaluation protocol
   - doc-005 - Local decision models for llama.cpp (NUMP-016)
   - 'doc-006 - Decision model watch: ggml-org GGUFs vs JevBench'
@@ -41,19 +47,19 @@ Quyet-1.0-Large (chinhnc, Gemma-4-31B-it fine-tune, Apache-2.0) ranks first on J
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Doc states the Quyet mechanism from the quyet source against upstream `openjev`: label alphabet and the 10-option training limit, noul order, per-type temperatures, prompt v2 with the Gemma 4 markup, truncation, and confirms the type match or names the mismatch
-- [ ] #2 A converted GGUF on saturn carries `gemma4.decision.type = openjev`, the three temperature keys and a `systemone` template whose rendered prompt equals a Python replica of the quyet renderer on a fixed sample of choice, score and noul questions (server verbose log), with the quant and context size chosen and the VRAM measured on the 3090
-- [ ] #3 A router preset reports `output_modalities: ["decisions"]` and answers Choice, Score and Noul through `numpty.TypeSafe`, with cold and warm latency recorded
-- [ ] #4 JevBench public 231 on upstream llama-server reproduces the published public-test figure within the decision-002 tolerance (one item), or the doc explains the gap and what was tried
-- [ ] #5 typed-decisions, throughput (one and five questions) and the distribution-sample rows are recorded with the NUMP-021 protocol and compared with Winnow, Clef-Flash and lev
-- [ ] #6 Doc states the image result: whether a Gemma-4-31B mmproj loads with the preset, whether upstream accepts an image request for this model, and a measured comparison with Clef-Flash on image cases, with the caveat that Quyet trained without images
-- [ ] #7 Decision record states whether Quyet replaces a row of the decision-002 requirement-to-model table, and the recommended quant, context and preset for the 3090
+- [x] #1 Doc states the Quyet mechanism from the quyet source against upstream `openjev`: label alphabet and the 10-option training limit, noul order, per-type temperatures, prompt v2 with the Gemma 4 markup, truncation, and confirms the type match or names the mismatch
+- [x] #2 A converted GGUF on saturn carries `gemma4.decision.type = openjev`, the three temperature keys and a `systemone` template whose rendered prompt equals a Python replica of the quyet renderer on a fixed sample of choice, score and noul questions (server verbose log), with the quant and context size chosen and the VRAM measured on the 3090
+- [x] #3 A router preset reports `output_modalities: ["decisions"]` and answers Choice, Score and Noul through `numpty.TypeSafe`, with cold and warm latency recorded
+- [x] #4 JevBench public 231 on upstream llama-server reproduces the published public-test figure within the decision-002 tolerance (one item), or the doc explains the gap and what was tried
+- [x] #5 typed-decisions, throughput (one and five questions) and the distribution-sample rows are recorded with the NUMP-021 protocol and compared with Winnow, Clef-Flash and lev
+- [x] #6 Doc states the image result: whether a Gemma-4-31B mmproj loads with the preset, whether upstream accepts an image request for this model, and a measured comparison with Clef-Flash on image cases, with the caveat that Quyet trained without images
+- [x] #7 Decision record states whether Quyet replaces a row of the decision-002 requirement-to-model table, and the recommended quant, context and preset for the 3090
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 doc records reasoning and sources
-- [ ] #2 decision record produced
+- [x] #1 doc records reasoning and sources
+- [x] #2 decision record produced
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -88,6 +94,14 @@ Review amendments (2026-10-08, @waylonflinn):
 - Order: NUMP-021 is done first in a separate session. This task resumes after it, so AC #5 runs with the consolidated `scripts/eval/` commands and no deviation note is needed.
 <!-- SECTION:PLAN:END -->
 
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-10-08 AC #1/#2 progress. quyet source re-read at d2514fe (2026-10-08, v1.0.2): prompt v2 confirmed, A..J, per-type T, describe() falsy->fallback, non-string descriptions json.dumps with ', ' ': ' separators, compact state JSON, Gemma 4 template thinking off; HF card revised 2026-10-08 (no figures). Upstream openjev (b11429): A-Z a-z all single Gemma 4 tokens (verified), true-first noul, temps looked up as type.bucket then type (Quyet keys are per type), images via mtmd, ordered_json keeps request key order. Downloaded mradermacher Q4_K_M (sha256 e7fc4952..., matches HF LFS) and mmproj-f16 to /opt/llama/models. Converted with gguf_add_decision.py --type openjev, T 1.3007/1.3159/1.4957, template ~/Build/quyet_systemone.jinja -> Quyet-1.0-Large.Q4_K_M-systemone.gguf (64 keys, 833 tensors). Verbose server 8099 at ctx 32768 q8_0 KV: 21.0 GB VRAM (weights 17.8 GB, KV 1.36 GB global 10 layers + 0.64 GB SWA 50 layers, compute 0.4 GB). Rendered prompts equal the quyet replica (transformers AutoTokenizer + quyet code) on 7 questions x 2 runs (choice/score/noul, string state with < and quotes, JSON list state with non-ASCII, empty and JSON descriptions, 10 options); input token counts equal (203/184/87/91). Published 0.909/0.089 figure not found in board v1.6.0/v1.6.1 JSON, model card revisions, quyet.ai or git history.
+
+2026-10-08 AC #3-#7. Preset quyet-large-Q4 added to models.ini (backup .bak-2026-10-08): converted GGUF + mmproj f16, ctx 32768, jinja; router reports output_modalities decisions, input_modalities text+image. numpty.TypeSafe README example: cold 4.59 s, warm 0.27-0.31 s. doc-008 commands from the Mac: JevBench public 208/231 (0.900, Brier 0.139, ECE 0.043, ordinal MAE 0.171, p50 0.27 s / p95 2.40 s); typed-decisions acc 0.804 (noul 0.878, choice 0.753, score 0.786), KL 0.270, Brier 0.111, pmax 0.797, ECE 0.021, warm p50 1.57 s, 1479 tokens; samples t1 0.24-0.42 s, t5 0.93-1.82 s. Results in scripts/eval/results/quyet-large-Q4/ (uv run pytest -q: 275 passed). Published 0.909 figure: source not found (board JSON v1.6.0/v1.6.1, model card revisions, quyet.ai, quyet and jevbench repos); 208 is 2 items under 210, one outside tolerance; prompt/token/temperature/label equality verified, Q4_K_M vs bf16 is the remaining explanation; recorded in doc-009 and decision-003 item 4. Images: mmproj loads (22.3 GB), upstream accepts the request, red-circle probe answered like Clef-Flash (red 0.98, circle 0.97, text 0.08; text-only control near uniform); caveat recorded. VRAM 19.8 GB at 8k, 21.0 GB at 32k, 22.3 GB with mmproj; 16k and q4_0 KV fallbacks not needed. decision-003 created with the CLI (status proposed), body written below the frontmatter as for decision-001/002. doc-008 gained the Quyet row, preset and recreation notes. Probe scripts stay in scratch; template and preset live on saturn and in doc-009.
+<!-- SECTION:NOTES:END -->
+
 ## Comments
 
 <!-- COMMENTS:BEGIN -->
@@ -103,3 +117,9 @@ created: 2026-10-08 16:25
 Plan reviewed. Q4_K_M, ctx 32k (16k fallback), q4_0 KV only if needed. Paused in Planning until NUMP-021 is done; resume then and move to In Progress.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Quyet-1.0-Large converted to an upstream llama-server decision GGUF (type openjev) by metadata only: five header keys on a copy of the mradermacher Q4_K_M, template quyet_systemone.jinja reproducing the quyet package prompt v2; rendered prompts and token counts equal the quyet renderer on 7 varied questions (verbose server log). Served on saturn as preset quyet-large-Q4 (ctx 32768, q8_0 KV, mmproj f16; 21.0 GB, 22.3 GB with mmproj). Verified: numpty.TypeSafe answers Choice/Score/Noul (cold 4.6 s, warm 0.3 s); JevBench public 208/231 (Winnow 198, Clef-Flash 190; the task's 0.909 figure has no findable source, gap of 2 items explained in doc-009); typed-decisions 0.804 (Clef-Flash 0.707, Winnow 0.702), KL 0.270, Brier 0.111; images work through the mmproj on a synthetic probe with the untrained caveat. Deliverables: doc-009, decision-003 (proposed: Quyet takes text accuracy, images and calibration; Clef-Flash keeps throughput and VRAM headroom), doc-008 row, scripts/eval/results/quyet-large-Q4/ (pytest 275 passed).
+<!-- SECTION:FINAL_SUMMARY:END -->
